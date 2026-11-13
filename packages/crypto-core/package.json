@@ -1,0 +1,26 @@
+{
+  "name": "@amaracus/crypto-core",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=dist/index.js --external:@azure/*",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.14.0",
+    "@azure/keyvault-keys": "^4.10.2",
+    "@noble/curves": "2.4.0",
+    "@noble/post-quantum": "0.7.1",
+    "@peculiar/x509": "^2.1.0",
+    "node-seal": "6.0.3",
+    "reflect-metadata": "^0.2.2",
+    "shamir-secret-sharing": "0.0.4"
+  }
+}

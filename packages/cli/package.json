@@ -1,0 +1,24 @@
+{
+  "name": "amaracus",
+  "version": "1.0.0",
+  "description": "Official Command Line Interface for AMARACUS Cryptographic Developer Platform",
+  "main": "dist/index.js",
+  "bin": {
+    "amaracus": "./dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/bin.ts",
+    "start": "node dist/bin.js"
+  },
+  "keywords": ["amaracus", "cli", "cryptography", "pqc", "kms", "pki", "cbom"],
+  "author": "AMARACUS Engineering",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@amaracus/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.3",
+    "typescript": "^5.9.3"
+  }
+}

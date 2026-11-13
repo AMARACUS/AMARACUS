@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amaracus"
+version = "1.0.0"
+description = "Official Python SDK for the AMARACUS Cryptographic Developer Platform"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "AMARACUS Engineering", email = "security@amaracus.tech" }
+]
+keywords = [
+    "amaracus",
+    "cryptography",
+    "pqc",
+    "kms",
+    "pki",
+    "fhe",
+    "zk",
+    "mpc",
+    "developer-platform"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]

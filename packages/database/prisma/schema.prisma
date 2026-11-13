@@ -1,0 +1,1331 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
+  teamMembers   TeamMember[]
+
+  communicationPreference UserCommunicationPreference?
+
+  @@map("user")
+}
+
+model Session {
+  id                   String    @id @default(uuid())
+  expiresAt            DateTime
+  token                String    @unique
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+model Organization {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String?       @unique
+  logo        String?
+  createdAt   DateTime      @default(now())
+  metadata    String?
+  members     Member[]
+  invitations Invitation[]
+  projects    Project[]
+  auditEvents AuditEvent[]
+  keys        CryptographicKey[]
+  customerKeyProviders CustomerKeyProvider[]
+  customerRegisteredKeys CustomerRegisteredKey[]
+  certificateAuthorities CertificateAuthority[]
+  certificates           Certificate[]
+  certificateRequests    CertificateRequest[]
+  certificateRevocations CertificateRevocation[]
+  cryptoAssets           CryptoAsset[]
+  cryptoRelationships    CryptoRelationship[]
+  cryptoFindings         CryptoFinding[]
+  cryptoSnapshots        CryptoInventorySnapshot[]
+  cryptoMigrationPlans   CryptoMigrationPlan[]
+  zkCircuits             ZkCircuit[]
+  zkProofRecords         ZkProofRecord[]
+  fheKeys                FheKey[]
+  mpcSessions            MpcSession[]
+  thresholdKeys          ThresholdKey[]
+  thresholdSessions      ThresholdSession[]
+  apiCredentials         ApiCredential[]
+  webhookEndpoints       WebhookEndpoint[]
+  asyncJobs              AsyncJob[]
+  apiUsageRecords        ApiUsageRecord[]
+  billingCustomer        BillingCustomer?
+  billingSubscriptions   BillingSubscription[]
+  billingUsages          BillingUsage[]
+  billingUsageEvents     BillingUsageEvent[]
+  billingSafetyState     BillingSafetyState?
+  cryptographicOperations CryptographicOperation[]
+  cryptographicPolicies   CryptographicPolicy[]
+  teams                   Team[]
+  serviceIdentities       ServiceIdentity[]
+  configurationDrifts     ConfigurationDrift[]
+  securitySetting         OrganizationSecuritySetting?
+  uploads                 Upload[]
+
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?      @default("member")
+  status         String       @default("pending")
+  expiresAt      DateTime
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@map("invitation")
+}
+
+model Project {
+  id             String             @id @default(uuid())
+  name           String
+  slug           String
+  description    String?
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  environments   Environment[]
+  keys           CryptographicKey[]
+  customerKeyProviders CustomerKeyProvider[]
+  customerRegisteredKeys CustomerRegisteredKey[]
+  certificateAuthorities CertificateAuthority[]
+  certificates           Certificate[]
+  certificateRequests    CertificateRequest[]
+  serviceIdentities      ServiceIdentity[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("project")
+}
+
+model Environment {
+  id             String             @id @default(uuid())
+  name           String
+  slug           String
+  type           String          // "development" | "staging" | "production"
+  projectId      String
+  project        Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  apiCredentials ApiCredential[]
+  keys           CryptographicKey[]
+  customerKeyProviders CustomerKeyProvider[]
+  customerRegisteredKeys CustomerRegisteredKey[]
+  certificateAuthorities CertificateAuthority[]
+  certificates           Certificate[]
+  certificateRequests    CertificateRequest[]
+  serviceIdentities      ServiceIdentity[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+  @@map("environment")
+}
+
+model ApiCredential {
+  id             String        @id @default(uuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  environmentId  String
+  environment    Environment   @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name           String
+  prefix         String
+  keyHash        String        @unique
+  scopes         Json?         // Array of scope strings, e.g. ["keys:read", "crypto:execute"]
+  /// Optional IPs or CIDR ranges the key may be used from; empty or null means any address.
+  allowedIps     Json?
+  status         String        @default("ACTIVE") // ACTIVE, DISABLED, REVOKED, EXPIRED
+  createdBy      String?
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([environmentId])
+  @@index([keyHash])
+  @@index([status])
+  @@map("api_credential")
+}
+
+model AuditEvent {
+  id             String        @id @default(uuid())
+  action         String
+  actorId        String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resourceId     String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@map("audit_event")
+}
+
+model CryptographicKey {
+  id                  String                    @id @default(uuid())
+  name                String
+  description         String?
+  organizationId      String
+  organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId           String
+  project             Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId       String
+  environment         Environment               @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  algorithm           String                    // e.g., "aes-256-gcm", "ed25519", "x25519"
+  purpose             String                    // "ENCRYPTION", "SIGNING", "KEY_AGREEMENT", "KEY_WRAPPING"
+  provider            String                    // "LOCAL_DEV", "AWS_KMS", "AZURE_KEY_VAULT", "HSM_PKCS11"
+  status              String                    @default("ACTIVE") // PENDING, ACTIVE, DISABLED, ROTATING, REVOKED, SCHEDULED_FOR_DELETION, DESTROYED
+  currentVersion      Int                       @default(1)
+  expiresAt           DateTime?
+  activatedAt         DateTime?                 @default(now())
+  rotatedAt           DateTime?
+  disabledAt          DateTime?
+  revokedAt           DateTime?
+  scheduledDeletionAt DateTime?
+  destroyedAt         DateTime?
+  metadata            Json?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  versions            CryptographicKeyVersion[]
+
+  @@unique([organizationId, projectId, environmentId, name])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([status])
+  @@map("cryptographic_key")
+}
+
+model CryptographicKeyVersion {
+  id                   String           @id @default(uuid())
+  keyId                String
+  key                  CryptographicKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  version              Int
+  providerKeyId        String           // Provider's internal reference (e.g. AWS Key ARN, Azure Key ID, or local UUID)
+  status               String           @default("ACTIVE") // ACTIVE, DEPRECATED, DISABLED, REVOKED, DESTROYED
+  publicKey            String?          // Safe public key string (for asymmetric algorithms)
+  encryptedKeyMaterial String?          // Encrypted under Master KEK (Local Dev only; NULL for Cloud KMS)
+  keyFingerprint       String?          // SHA-256 digest fingerprint of the key
+  activatedAt          DateTime?        @default(now())
+  revokedAt            DateTime?
+  destroyedAt          DateTime?
+  metadata             Json?
+  createdAt            DateTime         @default(now())
+
+  @@unique([keyId, version])
+  @@index([keyId])
+  @@index([status])
+  @@map("cryptographic_key_version")
+}
+
+model CustomerKeyProvider {
+  id                  String                    @id @default(uuid())
+  organizationId      String
+  organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId           String
+  project             Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId       String
+  environment         Environment               @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name                String
+  displayName         String?
+  providerType        String                    // "AZURE_KEY_VAULT" | "AZURE_MANAGED_HSM"
+  resourceType        String                    @default("KEY_VAULT") // "KEY_VAULT" | "MANAGED_HSM"
+  ownershipType       String                    @default("CUSTOMER_MANAGED") // "CUSTOMER_MANAGED"
+  vaultUrl            String
+  hsmUrl              String?
+  resourceId          String?
+  authType            String                    @default("SERVICE_PRINCIPAL") // "SERVICE_PRINCIPAL" | "MANAGED_IDENTITY" | "WORKLOAD_IDENTITY"
+  authenticationMethod String                   @default("SERVICE_PRINCIPAL")
+  encryptedAuthConfig String?                   // AES-256-GCM encrypted credentials under secret vault
+  status              String                    @default("CONNECTED") // "CONNECTED" | "DEGRADED" | "DISCONNECTED" | "ERROR"
+  connectionStatus    String                    @default("CONNECTED") // "PENDING" | "CONNECTING" | "CONNECTED" | "DEGRADED" | "DISCONNECTED" | "AUTHORIZATION_FAILED" | "RESOURCE_NOT_FOUND" | "KEY_NOT_FOUND" | "CAPABILITY_ERROR" | "ERROR"
+  onboardingState     String                    @default("CONFIGURED") // "NOT_STARTED" | "CONFIGURATION_REQUIRED" | "CONFIGURED" | "CONNECTION_TESTING" | "CONNECTION_FAILED" | "CONNECTED" | "CAPABILITY_DISCOVERY" | "CAPABILITY_DISCOVERY_FAILED" | "READY" | "DISCONNECTED"
+  capabilityDiscoveryStatus String              @default("NOT_STARTED") // "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE" | "FAILED"
+  isHsmBacked         Boolean                   @default(false)
+  capabilities        Json?
+  lastHealthCheckAt   DateTime?
+  healthStatus        String?
+  healthMessage       String?
+  lastHealthCheckError String?
+  registeredKeys      CustomerRegisteredKey[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  @@unique([organizationId, projectId, environmentId, name])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([providerType])
+  @@map("customer_key_provider")
+}
+
+model CustomerRegisteredKey {
+  id                  String                    @id @default(uuid())
+  providerId          String
+  provider            CustomerKeyProvider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  organizationId      String
+  organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId           String
+  project             Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId       String
+  environment         Environment               @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  keyIdentifier       String                    // Name of the key in customer's Azure Key Vault / Managed HSM
+  displayName         String?
+  keyVaultUrl         String
+  keyType             String                    // "RSA", "RSA-HSM", "oct-HSM", "EC", "EC-HSM"
+  algorithm           String                    // "AES-256-GCM", "RSA-OAEP-256", "RS256"
+  purpose             String                    // "ENCRYPTION", "SIGNING", "KEY_WRAPPING"
+  ownershipType       String                    @default("CUSTOMER_MANAGED")
+  isHsmBacked         Boolean                   @default(false)
+  hsmBackedStatus     String                    @default("UNKNOWN") // "VERIFIED_HSM" | "STANDARD_VAULT" | "UNKNOWN" | "UNVERIFIED"
+  status              String                    @default("ACTIVE") // "ACTIVE", "DISABLED", "REVOKED", "DELETED_IN_PROVIDER"
+  keyState            String                    @default("ACTIVE") // "DISCOVERED" | "REGISTERED" | "ACTIVE" | "DISABLED" | "REVOKED" | "EXPIRED" | "DELETED" | "UNKNOWN"
+  currentVersion      String                    // Azure key version string
+  publicKey           String?                   // Safe public key string (for asymmetric keys)
+  keyFingerprint      String?                   // SHA-256 fingerprint
+  operations          Json?                     // ["encrypt", "decrypt", "wrap", "unwrap", "sign", "verify"]
+  capabilities        Json?                     // Structured KeyCapabilities map
+  lastSyncedAt        DateTime                  @default(now())
+  lastDiscoveredAt    DateTime                  @default(now())
+  metadata            Json?
+  versions            CustomerKeyVersion[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  @@unique([providerId, keyIdentifier])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([providerId])
+  @@index([status])
+  @@map("customer_registered_key")
+}
+
+model CustomerKeyVersion {
+  id                  String                @id @default(uuid())
+  registeredKeyId     String
+  registeredKey       CustomerRegisteredKey @relation(fields: [registeredKeyId], references: [id], onDelete: Cascade)
+  version             String                // Azure version identifier
+  status              String                @default("ACTIVE") // "ACTIVE", "DISABLED"
+  publicKey           String?
+  keyFingerprint      String?
+  isCurrent           Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  expiresAt           DateTime?
+
+  @@unique([registeredKeyId, version])
+  @@index([registeredKeyId])
+  @@map("customer_key_version")
+}
+
+model CertificateAuthority {
+  id                     String                 @id @default(uuid())
+  name                   String
+  description            String?
+  organizationId         String
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId              String
+  project                Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId          String
+  environment            Environment            @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  type                   String                 // "ROOT_CA" | "INTERMEDIATE_CA"
+  status                 String                 @default("ACTIVE") // "ACTIVE" | "DISABLED" | "REVOKED"
+  subject                String
+  issuer                 String
+  parentAuthorityId      String?
+  parentAuthority        CertificateAuthority?  @relation("AuthorityHierarchy", fields: [parentAuthorityId], references: [id], onDelete: SetNull)
+  subordinateAuthorities CertificateAuthority[] @relation("AuthorityHierarchy")
+  keyReference           String                 // References CryptographicKey.id
+  keyAlgorithm           String                 // "RSA-4096", "ECDSA-P384", "ED25519"
+  signatureAlgorithm     String                 // "SHA256withRSA", "SHA384withECDSA", "Ed25519"
+  certificatePem         String
+  serialNumber           String
+  fingerprint            String
+  notBefore              DateTime
+  notAfter               DateTime
+  pathLenConstraint      Int?
+  crlDistributionPoint   String?
+  ocspUrl                String?
+  metadata               Json?
+  certificates           Certificate[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@unique([organizationId, projectId, environmentId, name])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([status])
+  @@map("certificate_authority")
+}
+
+model Certificate {
+  id                 String                 @id @default(uuid())
+  name               String?
+  organizationId     String
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId          String
+  project            Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId      String
+  environment        Environment            @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  authorityId        String?
+  authority          CertificateAuthority?  @relation(fields: [authorityId], references: [id], onDelete: SetNull)
+  keyReference       String                 // References CryptographicKey.id
+  subject            String
+  issuer             String
+  serialNumber       String
+  certificateType    String                 // "ROOT_CA" | "INTERMEDIATE_CA" | "SERVER" | "CLIENT" | "CODE_SIGNING" | "EMAIL" | "DEVICE" | "CUSTOM"
+  keyAlgorithm       String                 // "RSA-2048", "ECDSA-P256", "ED25519"
+  signatureAlgorithm String                 // "SHA256withRSA", "SHA256withECDSA", "Ed25519"
+  publicKeyAlgorithm String                 // "RSA", "EC", "Ed25519"
+  status             String                 @default("ACTIVE") // "REQUESTED" | "ISSUED" | "ACTIVE" | "EXPIRING" | "EXPIRED" | "REVOKED" | "SUSPENDED" | "REPLACED" | "FAILED"
+  notBefore          DateTime
+  notAfter           DateTime
+  fingerprint        String
+  fingerprintSha1    String?
+  certificatePem     String
+  chainPem           String?
+  chainReference     String?
+  san                Json?                  // { dns: [], ip: [], uri: [], email: [] }
+  keyUsage           Json?                  // ["digitalSignature", "keyEncipherment", ...]
+  extendedKeyUsage   Json?                  // ["serverAuth", "clientAuth", ...]
+  renewalOfId        String?
+  replacedById       String?
+  metadata           Json?
+  revocation         CertificateRevocation?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@unique([organizationId, serialNumber])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([authorityId])
+  @@index([keyReference])
+  @@index([status])
+  @@index([fingerprint])
+  @@map("certificate")
+}
+
+model CertificateRequest {
+  id                 String        @id @default(uuid())
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId          String
+  project            Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId      String
+  environment        Environment   @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  keyReference       String?
+  subject            String
+  csrPem             String
+  publicKey          String?
+  keyAlgorithm       String
+  signatureAlgorithm String
+  status             String        @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED" | "ISSUED"
+  san                Json?
+  keyUsage           Json?
+  extendedKeyUsage   Json?
+  certificateId      String?
+  metadata           Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([status])
+  @@map("certificate_request")
+}
+
+model CertificateRevocation {
+  id             String       @id @default(uuid())
+  certificateId  String       @unique
+  certificate    Certificate  @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reason         String       @default("UNSPECIFIED") // "UNSPECIFIED" | "KEY_COMPROMISE" | "CA_COMPROMISE" | "AFFILIATION_CHANGED" | "SUPERSEDED" | "CESSATION_OF_OPERATION" | "CERTIFICATE_HOLD" | "PRIVILEGE_WITHDRAWN"
+  revokedAt      DateTime     @default(now())
+  revokedBy      String?
+  invalidityDate DateTime?
+  comment        String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([reason])
+  @@map("certificate_revocation")
+}
+
+model CryptoAsset {
+  id              String               @id @default(uuid())
+  organizationId  String
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId       String?
+  environmentId   String?
+  assetType       String               // "KEY", "CERTIFICATE", "CERTIFICATE_AUTHORITY", "ALGORITHM", "CRYPTO_LIBRARY", "CRYPTO_PROVIDER", "CRYPTO_PROTOCOL", "CRYPTO_ENDPOINT", "CRYPTO_CONFIGURATION", "CRYPTO_OPERATION"
+  name            String
+  source          String               // "KEY_MANAGEMENT", "CERTIFICATE_INVENTORY", "CRYPTO_API", "SOURCE_CODE", "CONFIGURATION", "PROVIDER"
+  confidence      String               @default("HIGH") // "HIGH", "MEDIUM", "LOW", "UNKNOWN"
+  algorithm       String?              // e.g. "RSA-2048", "AES-256-GCM", "ML-KEM-768"
+  provider        String?              // e.g. "LOCAL_DEV", "AZURE_KEY_VAULT", "AZURE_MANAGED_HSM", "NODE_CRYPTO"
+  status          String               @default("ACTIVE") // "ACTIVE", "INACTIVE", "DEPRECATED", "EXPIRED", "REVOKED"
+  quantumStatus   String               @default("UNKNOWN") // "QUANTUM_VULNERABLE", "PQC", "HYBRID", "CLASSICAL", "UNKNOWN"
+  fingerprint     String?
+  firstSeenAt     DateTime             @default(now())
+  lastSeenAt      DateTime             @default(now())
+  metadata        Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  outgoingEdges   CryptoRelationship[] @relation("SourceRelationships")
+  incomingEdges   CryptoRelationship[] @relation("TargetRelationships")
+  findings        CryptoFinding[]
+
+  @@unique([organizationId, assetType, name, source])
+  @@index([organizationId])
+  @@index([assetType])
+  @@index([algorithm])
+  @@index([quantumStatus])
+  @@index([status])
+  @@map("crypto_asset")
+}
+
+model CryptoRelationship {
+  id               String       @id @default(uuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceAssetId    String
+  sourceAsset      CryptoAsset  @relation("SourceRelationships", fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  targetAssetId    String
+  targetAsset      CryptoAsset  @relation("TargetRelationships", fields: [targetAssetId], references: [id], onDelete: Cascade)
+  relationshipType String       // "USES", "DEPENDS_ON", "SIGNED_BY", "ENCRYPTED_BY", "ASSOCIATED_WITH", "STORED_IN", "ISSUED_BY", "VERIFIED_BY", "IMPLEMENTS", "CONFIGURED_WITH", "PROVIDED_BY", "EXPIRES_ON", "REPLACED_BY", "AFFECTED_BY_POLICY"
+  confidence       String       @default("HIGH") // "HIGH", "MEDIUM", "LOW"
+  metadata         Json?
+  createdAt        DateTime     @default(now())
+
+  @@unique([organizationId, sourceAssetId, targetAssetId, relationshipType])
+  @@index([organizationId])
+  @@index([sourceAssetId])
+  @@index([targetAssetId])
+  @@index([relationshipType])
+  @@map("crypto_relationship")
+}
+
+model CryptoFinding {
+  id                  String       @id @default(uuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId           String?
+  environmentId       String?
+  affectedAssetId     String?
+  affectedAsset       CryptoAsset? @relation(fields: [affectedAssetId], references: [id], onDelete: SetNull)
+  severity            String       // "INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  category            String       // "DEPRECATED_ALGORITHM", "WEAK_KEY_SIZE", "EXPIRED_CERTIFICATE", "EXPIRING_SOON", "REVOKED_CERTIFICATE_REFERENCED", "UNSUPPORTED_ALGORITHM", "NON_COMPLIANT_POLICY", "QUANTUM_VULNERABLE_PUBLIC_KEY", "MISSING_ROTATION", "PROVIDER_MISMATCH", "ORPHANED_KEY", "ORPHANED_CERTIFICATE", "ALGORITHM_MIGRATION_REQUIRED"
+  title               String
+  description         String
+  evidence            Json?        // Structured proof of finding
+  policySource        String?      // Which policy / NIST / RFC rule triggered this
+  firstDetectedAt     DateTime     @default(now())
+  lastDetectedAt      DateTime     @default(now())
+  status              String       @default("OPEN") // "OPEN", "ACKNOWLEDGED", "IN_PROGRESS", "RESOLVED", "SUPPRESSED", "FALSE_POSITIVE"
+  remediationGuidance String?
+  resolvedBy          String?
+  resolvedAt          DateTime?
+  resolutionComment   String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([affectedAssetId])
+  @@index([severity])
+  @@index([status])
+  @@index([category])
+  @@map("crypto_finding")
+}
+
+model CryptoInventorySnapshot {
+  id                   String       @id @default(uuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  snapshotDate         DateTime     @default(now())
+  totalAssets          Int          @default(0)
+  assetsByType         Json?        // { "KEY": 4, "CERTIFICATE": 2, ... }
+  findingsBySeverity   Json?        // { "CRITICAL": 0, "HIGH": 2, ... }
+  quantumStatusSummary Json?        // { "QUANTUM_VULNERABLE": 3, "PQC": 1, ... }
+  assetFingerprints    Json?        // Map of assetId -> fingerprint for drift detection
+  drift                Json?        // { "newAssets": [], "changedAssets": [], "removedAssets": [], "unchangedAssets": [] }
+  metadata             Json?
+  createdAt            DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([snapshotDate])
+  @@map("crypto_inventory_snapshot")
+}
+
+model CryptoMigrationPlan {
+  id                     String       @id @default(uuid())
+  organizationId         String
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                   String
+  description            String?
+  affectedAssetIds       Json         // string[]
+  currentAlgorithm       String
+  targetAlgorithm        String
+  migrationStrategy      String       // "DIRECT_REPLACEMENT", "HYBRID_DUAL_RUN", "PHASED_ROTATION"
+  dependencies           Json?        // string[]
+  blockers               Json?        // string[]
+  owner                  String?
+  environmentId          String?
+  status                 String       @default("NOT_STARTED") // "NOT_STARTED", "IDENTIFIED", "PLANNED", "IN_PROGRESS", "VALIDATION_REQUIRED", "COMPLETED", "BLOCKED"
+  validationRequirements Json?        // string[]
+  metadata               Json?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("crypto_migration_plan")
+}
+
+// ==========================================
+// Phase 9: Advanced Cryptography Models
+// ==========================================
+
+model ZkCircuit {
+  id                     String       @id @default(uuid())
+  organizationId         String
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId              String?
+  environmentId          String?
+  name                   String
+  version                String       @default("1.0.0")
+  description            String?
+  provingSystem          String       // "NIZK_SCHNORR_PEDERSEN", "GROTH16_R1CS"
+  publicInputsSchema     Json         // string[]
+  privateInputsSchema    Json         // string[]
+  constraintsDescription String
+  verificationKey        Json
+  provingKeyMetadata     Json?
+  status                 String       @default("ACTIVE") // "ACTIVE", "DRAFT", "DEPRECATED"
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  proofRecords           ZkProofRecord[]
+
+  @@unique([organizationId, name, version])
+  @@index([organizationId])
+  @@index([status])
+  @@map("zk_circuit")
+}
+
+model ZkProofRecord {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  circuitId      String
+  circuit        ZkCircuit    @relation(fields: [circuitId], references: [id], onDelete: Cascade)
+  circuitVersion String
+  publicInputs   Json
+  proofData      Json
+  verified       Boolean      @default(false)
+  durationMs     Int          @default(0)
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([circuitId])
+  @@map("zk_proof_record")
+}
+
+model FheKey {
+  id                 String       @id @default(uuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId          String?
+  environmentId      String?
+  scheme             String       @default("BFV") // "BFV", "CKKS"
+  polyModulusDegree  Int          @default(4096)
+  publicKeyBase64    String
+  relinKeysBase64    String?
+  encryptedSecretKey String?      // Encrypted under tenant Master KEK
+  metadata           Json?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([scheme])
+  @@map("fhe_key")
+}
+
+model MpcSession {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId       String?
+  environmentId   String?
+  title           String
+  protocol        String       @default("ADDITIVE_SECRET_SHARING")
+  operation       String       @default("SECURE_SUM") // "SECURE_SUM", "SECURE_AVERAGE", "SECURE_COUNT"
+  requiredParties Int          @default(2)
+  threshold       Int          @default(2)
+  status          String       @default("WAITING_FOR_PARTIES")
+  currentRound    Int          @default(0)
+  totalRounds     Int          @default(2)
+  result          Json?
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  parties         MpcParty[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("mpc_session")
+}
+
+model MpcParty {
+  id                String     @id @default(uuid())
+  sessionId         String
+  session           MpcSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  partyId           String
+  name              String
+  role              String     @default("INPUT_PARTY")
+  hasSubmittedInput Boolean    @default(false)
+  blindedShareHash  String?
+  joinedAt          DateTime   @default(now())
+
+  @@unique([sessionId, partyId])
+  @@index([sessionId])
+  @@map("mpc_party")
+}
+
+model ThresholdKey {
+  id                String       @id @default(uuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId         String?
+  environmentId     String?
+  name              String
+  algorithm         String       @default("ED25519_FROST")
+  threshold         Int          // M
+  totalParticipants Int          // N
+  groupPublicKey    String
+  participants      Json         // ThresholdParticipant[]
+  metadata          Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  sessions          ThresholdSession[]
+
+  @@index([organizationId])
+  @@map("threshold_key")
+}
+
+model ThresholdSession {
+  id                 String        @id @default(uuid())
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  keyId              String
+  thresholdKey       ThresholdKey  @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  operation          String        @default("THRESHOLD_SIGN")
+  messageToSign      String?
+  payloadToAuthorize String?
+  threshold          Int
+  totalParticipants  Int
+  approvals          Json          // Array of participant approvals
+  status             String        @default("PENDING_APPROVALS")
+  combinedResult     Json?
+  expiresAt          DateTime
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([keyId])
+  @@index([status])
+  @@map("threshold_session")
+}
+
+model WebhookEndpoint {
+  id             String            @id @default(uuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  url            String
+  description    String?
+  secretHash     String            // HMAC signing secret hash
+  secretPrefix   String            // Masked prefix for UI display
+  events         Json              // Array of subscribed event strings
+  status         String            @default("ACTIVE") // ACTIVE, DISABLED
+  failureCount   Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  deliveries     WebhookDelivery[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("webhook_endpoint")
+}
+
+model WebhookDelivery {
+  id             String          @id @default(uuid())
+  endpointId     String
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventType      String
+  eventId        String
+  payload        Json
+  responseStatus Int?
+  responseBody   String?
+  durationMs     Int?
+  status         String          @default("PENDING") // PENDING, DELIVERED, RETRYING, FAILED
+  attempts       Int             @default(0)
+  nextRetryAt    DateTime?
+  error          String?
+  createdAt      DateTime        @default(now())
+
+  @@index([endpointId])
+  @@index([status])
+  @@map("webhook_delivery")
+}
+
+model AsyncJob {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  environmentId  String?
+  type           String       // "ZK_PROVE", "FHE_EVALUATE", "MPC_COMPUTE", "DISCOVERY_SCAN"
+  status         String       @default("QUEUED") // QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED
+  progress       Int          @default(0)
+  input          Json?
+  result         Json?
+  error          String?
+  durationMs     Int?
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("async_job")
+}
+
+model ApiUsageRecord {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  environmentId  String?
+  credentialId   String?
+  endpoint       String
+  method         String
+  statusCode     Int
+  durationMs     Int
+  ipAddress      String?
+  userAgent      String?
+  timestamp      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([credentialId])
+  @@index([timestamp])
+  @@map("api_usage_record")
+}
+
+model CryptographicOperation {
+  id             String       @id @default(uuid())
+  requestId      String?
+  idempotencyKey String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  environmentId  String?
+  operationType  String       // "ENCRYPT", "DECRYPT", "SIGN", "VERIFY", "HASH", "HMAC", "KEY_GEN", etc.
+  algorithm      String?
+  keyId          String?
+  providerId     String?
+  status         String       @default("REQUESTED") // "REQUESTED", "VALIDATING", "AUTHORIZING", "AUTHORIZED", "RESOLVING", "QUEUED", "EXECUTING", "COMPLETED", "FAILED", "CANCELED", "TIMED_OUT", "DEAD_LETTER"
+  retryCount     Int          @default(0)
+  durationMs     Int?
+  metadata       Json?
+  result         Json?
+  error          Json?
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([requestId])
+  @@index([idempotencyKey])
+  @@index([status])
+  @@index([operationType])
+  @@map("cryptographic_operation")
+}
+
+// ============================================================================
+// Phase 11 — Billing, Subscriptions, Usage Metering & Safety Models (Polar.sh)
+// ============================================================================
+
+model BillingCustomer {
+  id               String       @id @default(uuid())
+  organizationId   String       @unique
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  polarCustomerId  String?      @unique
+  email            String?
+  name             String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([polarCustomerId])
+  @@map("billing_customer")
+}
+
+model BillingSubscription {
+  id                   String       @id @default(uuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  polarSubscriptionId  String?      @unique
+  plan                 String       @default("FREE") // FREE, STARTER, PRO, BUSINESS, PAYG
+  status               String       @default("INCOMPLETE") // ACTIVE, TRIALING, PAST_DUE, CANCELED, ENDED, INCOMPLETE
+  currentPeriodStart   DateTime     @default(now())
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean      @default(false)
+  canceledAt           DateTime?
+  metadata             Json?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([polarSubscriptionId])
+  @@index([status])
+  @@map("billing_subscription")
+}
+
+model BillingUsage {
+  id                   String       @id @default(uuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  periodStart          DateTime
+  periodEnd            DateTime
+  operationCount       Int          @default(0) // total operations in this period
+  includedAllowance    Int          @default(0) // allowance from plan (e.g. 150000 or 1000000)
+  overageCount         Int          @default(0) // operations beyond included allowance
+  estimatedCostCents   Int          @default(0) // estimated accrued cost in cents (for PAYG or overage)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([organizationId, periodStart, periodEnd])
+  @@index([organizationId])
+  @@map("billing_usage")
+}
+
+model BillingUsageEvent {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  operationId     String       @unique // idempotency key
+  operationType   String       // e.g. "SIGN", "ENCRYPT", "DECRYPT", "VERIFY", "KEY_GEN"
+  quantity        Int          @default(1)
+  keyId           String?
+  projectId       String?
+  timestamp       DateTime     @default(now())
+  reportedToPolar Boolean      @default(false)
+  polarEventId    String?
+
+  @@index([organizationId])
+  @@index([operationId])
+  @@index([timestamp])
+  @@map("billing_usage_event")
+}
+
+model BillingSafetyState {
+  id                     String       @id @default(uuid())
+  organizationId         String       @unique
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  circuitBreakerStatus   String       @default("NORMAL") // NORMAL, WARNING, THROTTLED, SUSPENDED
+  opsPerMinute           Int          @default(0)
+  opsPerHour             Int          @default(0)
+  opsPerDay              Int          @default(0)
+  lastWindowReset        DateTime     @default(now())
+  paygSpendingLimitCents              Int          @default(25000) // Default $250.00 hard cap
+  alertThresholdPercent               Int          @default(80)    // Alert at 80% of spending limit
+  autoHaltEnabled                     Boolean      @default(true)
+  overagePolicy                       String       @default("HARD_STOP") // HARD_STOP, AUTHORIZED_OVERAGE, ENTERPRISE_CUSTOM
+  authorizedOverageSpendingLimitCents Int          @default(0) // Explicit authorized overage spending cap in cents (0 = fail closed)
+  lastAlertSentAt                     DateTime?
+  suspensionReason       String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@map("billing_safety_state")
+}
+
+model BillingWebhookEvent {
+  id          String    @id @default(uuid())
+  eventId     String    @unique // Polar webhook event ID for idempotency/replay protection
+  eventType   String    // e.g. "subscription.created", "subscription.updated", "order.paid"
+  payload     Json
+  processed   Boolean   @default(false)
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([eventType])
+  @@map("billing_webhook_event")
+}
+
+model CryptographicPolicy {
+  id              String                         @id @default(uuid())
+  organizationId  String
+  organization    Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  currentVersion  Int                            @default(1)
+  isActive        Boolean                        @default(true)
+  enforcementMode String                         @default("ENFORCE") // ENFORCE, AUDIT, DISABLED
+  rules           Json                           // Detailed policy rules & constraints
+  metadata        Json?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+
+  versions        CryptographicPolicyVersion[]
+  assignments     CryptographicPolicyAssignment[]
+
+  @@index([organizationId])
+  @@index([organizationId, name])
+  @@map("cryptographic_policy")
+}
+
+model CryptographicPolicyVersion {
+  id            String              @id @default(uuid())
+  policyId      String
+  policy        CryptographicPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  version       Int
+  rules         Json
+  changeSummary String?
+  actorId       String?
+  createdAt     DateTime            @default(now())
+
+  @@unique([policyId, version])
+  @@index([policyId])
+  @@map("cryptographic_policy_version")
+}
+
+model CryptographicPolicyAssignment {
+  id             String              @id @default(uuid())
+  policyId       String
+  policy         CryptographicPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  organizationId String
+  scopeType      String              // "ORGANIZATION", "PROJECT", "ENVIRONMENT"
+  scopeId        String              // orgId, projectId, or envId
+  priority       Int                 @default(100)
+  createdAt      DateTime            @default(now())
+
+  @@unique([organizationId, scopeType, scopeId])
+  @@index([organizationId])
+  @@index([scopeType, scopeId])
+  @@map("cryptographic_policy_assignment")
+}
+
+model Team {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  members        TeamMember[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("team")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER") // "LEAD" | "MEMBER"
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_member")
+}
+
+model ServiceIdentity {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId  String?
+  environment    Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  status         String       @default("ACTIVE") // ACTIVE, DISABLED, REVOKED
+  scopes         Json?        // Array of scopes, e.g. ["keys:read", "crypto:execute"]
+  prefix         String       // Key prefix (e.g. "amsi_")
+  keyHash        String       @unique
+  createdBy      String?
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([status])
+  @@map("service_identity")
+}
+
+model ConfigurationDrift {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resourceType   String       // "POLICY", "PROVIDER", "KEY", "ENVIRONMENT"
+  resourceId     String
+  expectedState  Json
+  actualState    Json
+  driftSummary   String
+  status         String       @default("DETECTED") // "DETECTED" | "RESOLVED" | "IGNORED"
+  detectedAt     DateTime     @default(now())
+  resolvedAt     DateTime?
+
+  @@index([organizationId])
+  @@index([resourceType, resourceId])
+  @@index([status])
+  @@map("configuration_drift")
+}
+
+model OrganizationSecuritySetting {
+  id                      String       @id @default(uuid())
+  organizationId          String       @unique
+  organization            Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  enforceMfa              Boolean      @default(false)
+  allowedIpRanges         Json?        // string[] of CIDR ranges
+  defaultKeyRotationDays  Int          @default(90)
+  requireHsmInProduction  Boolean      @default(false)
+  requirePqcInProduction  Boolean      @default(false)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  @@map("organization_security_setting")
+}
+
+model Upload {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  storageName    String
+  originalName   String
+  sanitizedName  String
+  mimeType       String
+  size           Int
+  sha256         String
+  storagePath    String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@map("upload")
+}
+
+// No foreign key to organization: judging records outlive the submitting org.
+model HackathonSubmission {
+  id                String   @id @default(uuid())
+  organizationId    String
+  userId            String
+  userEmail         String
+  plan              String
+  projectName       String
+  category          String
+  description       String
+  sourceCodeUrl     String
+  sourceCodeType    String
+  apiUsageEndpoints Json     // string[]
+  demoUrl           String?
+  videoUrl          String?
+  confirmedTerms    Boolean
+  score             Int?
+  status            String   @default("SUBMITTED") // "SUBMITTED" | "UNDER_REVIEW" | "VERIFIED" | "DISQUALIFIED" | "WINNER"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([createdAt])
+  @@map("hackathon_submission")
+}
+
+// Fixed-window request counters shared by every API instance and kept across restarts.
+// Rows are swept a while after resetAt; see apps/api/src/middleware/rate-limiter.ts.
+/// A user's email and privacy choices. Marketing email is sent only when marketingEmails is true.
+model UserCommunicationPreference {
+  userId              String   @id
+  marketingEmails     Boolean  @default(false)
+  telemetryOptIn      Boolean  @default(true)
+  cookieConsentStatus String   @default("essential_only")
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_communication_preference")
+}
+
+/// Addresses that unsubscribed from marketing email (all marketing, or one category).
+/// Kept by address, so it also covers people without an account, and survives restarts.
+model EmailSuppression {
+  email        String   @id
+  category     String
+  source       String
+  reason       String
+  suppressedAt DateTime @default(now())
+
+  @@map("email_suppression")
+}
+
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limit_bucket")
+}
+
+// ---------------------------------------------------------------------------
+// Self-hosted edition (AMARACUS_EDITION=selfhosted). Unused by AMARACUS Cloud.
+// ---------------------------------------------------------------------------
+
+/// Append-only, hash-chained record of every billable cryptographic operation of this
+/// installation. A database trigger rejects UPDATE and DELETE (see migration 6).
+model UsageLedgerEntry {
+  seq             BigInt   @id @default(autoincrement())
+  timestamp       DateTime @default(now())
+  organizationId  String
+  operationId     String   @unique
+  operationType   String
+  quantity        Int      @default(1)
+  cumulativeTotal BigInt
+  prevHash        String
+  entryHash       String
+
+  @@index([timestamp])
+  @@map("usage_ledger_entry")
+}
+
+/// Who accepted PolyForm Shield 1.0.0 and the AMARACUS Additional Commercial Terms for this
+/// installation, and which exact texts (SHA-256) they accepted.
+model SelfHostLicenseAcceptance {
+  id                 String   @id @default(uuid())
+  licensee           String
+  acceptedByUserId   String
+  acceptedByEmail    String
+  shieldSha256       String
+  commercialSha256   String
+  commercialVersion  String
+  ipAddress          String?
+  acceptedAt         DateTime @default(now())
+
+  @@index([acceptedAt])
+  @@map("self_host_license_acceptance")
+}
+
+/// Licence keys bought from AMARACUS. Each one adds paid operations above the free allowance.
+model SelfHostLicenseKey {
+  licenseId  String   @id
+  licensee   String
+  operations BigInt
+  issuedAt   DateTime
+  expiresAt  DateTime?
+  token      String
+  addedAt    DateTime @default(now())
+
+  @@map("self_host_license_key")
+}

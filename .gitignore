@@ -1,0 +1,128 @@
+# ---------------------------------------------------------------------------
+# Environment and credentials: never commit real values. Only .env.example is tracked.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.env
+.envrc
+.secrets/
+secrets/
+.private/
+credentials.json
+*credentials*.json
+service-account*.json
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.aws/
+.azure/
+.cloudflared/
+.wrangler/
+.vercel/
+.netlify/
+
+# Keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.der
+*.csr
+id_rsa*
+id_ed25519*
+*.gpg
+*.asc
+
+# ---------------------------------------------------------------------------
+# Dependencies and build output
+# ---------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.cache/
+*.tsbuildinfo
+next-env.d.ts.bak
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# ---------------------------------------------------------------------------
+# Logs, local databases, backups and temporary files
+# ---------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+*.bak
+backups/
+tmp/
+temp/
+*.tmp
+*.swp
+*~
+
+# Local data written by the app
+.amaracus-local-store.json
+.amaracus-local-store.json.*
+storage/hackathon/
+storage/secure_uploads/*
+!storage/secure_uploads/.htaccess
+!storage/secure_uploads/web.config
+apps/api/storage/secure_uploads/*
+!apps/api/storage/secure_uploads/.htaccess
+!apps/api/storage/secure_uploads/web.config
+!apps/api/storage/secure_uploads/README.txt
+
+# ---------------------------------------------------------------------------
+# Editors, OS files and local tool state
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.code-workspace
+.claude/
+.court/
+brag-output*/
+skills-lock.json
+.trigger/
+deploy/cloudflare/bin/
+*.exe
+
+# Local AI build prompts and notes
+last_prompt.txt
+p54.txt
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Local agent skills that are not part of the product
+.agents/skills/brag/

@@ -1,0 +1,82 @@
+# AMARACUS self-hosted: Postgres + API + web console, all on your own machine or server.
+#
+#   cp .env.example .env        # then fill in your own values (see SELF_HOSTING.md)
+#   docker compose up -d --build
+#
+# The API applies database migrations when it starts (the "migrate" service), then listens
+# on API_PORT (default 4000). The web console listens on 3000. Put a TLS-terminating
+# reverse proxy (Caddy, nginx, Traefik, a cloud load balancer) in front of both for any
+# use beyond your own machine.
+#
+# Nothing in this file contacts AMARACUS. Every credential comes from your .env.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: amaracus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: amaracus
+    volumes:
+      - amaracus_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amaracus -d amaracus"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Not published to the host. Uncomment to reach Postgres from the host for backups.
+    # ports: ["127.0.0.1:5432:5432"]
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: builder
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://amaracus:${POSTGRES_PASSWORD}@db:5432/amaracus?schema=public
+      DIRECT_URL: postgresql://amaracus:${POSTGRES_PASSWORD}@db:5432/amaracus?schema=public
+    working_dir: /app/packages/database
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      AMARACUS_EDITION: selfhosted
+      DATABASE_URL: postgresql://amaracus:${POSTGRES_PASSWORD}@db:5432/amaracus?schema=public
+      DIRECT_URL: postgresql://amaracus:${POSTGRES_PASSWORD}@db:5432/amaracus?schema=public
+      PORT: "4000"
+    ports:
+      - "${API_PORT:-4000}:4000"
+    volumes:
+      - amaracus_uploads:/app/apps/api/storage/secure_uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL in .env}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?Set NEXT_PUBLIC_APP_URL in .env}
+        API_URL: http://api:4000
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  amaracus_pg:
+  amaracus_uploads:

@@ -1,0 +1,14 @@
+{
+  "extends": "../../packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "downlevelIteration": true
+  },
+  "ts-node": {
+    "files": true
+  },
+  "include": ["src"]
+}

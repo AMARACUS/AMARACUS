@@ -1,0 +1,13 @@
+AMARACUS
+Copyright (c) 2026 Amaracus Technologies, Bengaluru, India (https://amaracus.tech)
+
+Required Notice: Copyright (c) 2026 Amaracus Technologies (https://amaracus.tech)
+Required Notice: AMARACUS is offered only under the PolyForm Shield License 1.0.0 (file LICENSE, https://polyformproject.org/licenses/shield/1.0.0) together with the AMARACUS Additional Commercial Terms (file AMARACUS-ADDITIONAL-COMMERCIAL-TERMS.md). Using, modifying or distributing it means accepting both. The first 1,000 successful billable cryptographic operations per corporate group are free for life; every operation after that must be paid for.
+Required Notice: AMARACUS is source-available software. It is not open source as defined by the Open Source Initiative.
+
+Licensor Line of Business: AMARACUS cryptographic control plane, key management service and managed cryptographic API (https://amaracus.tech)
+
+The client SDKs and CLI in packages/sdk-ts, packages/sdk-py and packages/cli are licensed under the
+Apache License 2.0, as stated in their package metadata (packages/sdk-ts also ships the full LICENSE text).
+
+Third-party software used by AMARACUS is listed in THIRD_PARTY_NOTICES.md.
