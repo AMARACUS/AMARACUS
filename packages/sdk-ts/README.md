@@ -1,112 +1,125 @@
-# @amaracus-sdk/sdk
+# @amaracus/sdk
 
-Official TypeScript & JavaScript client library for the **AMARACUS Cryptographic Infrastructure Platform**.
+Official TypeScript and JavaScript SDK for [AMARACUS](https://amaracus.tech): encryption as a service, managed keys with rotation, hashing, signing, post-quantum ML-KEM and signed webhooks, from any Node.js backend.
 
-AMARACUS is an API-first cryptographic infrastructure company. This SDK is a thin, high-performance, strictly typed client for the AMARACUS Universal Cryptographic API. It contains **zero client-side cryptographic primitives**; all operations execute within authorized data-plane environments and Hardware Security Modules (HSMs).
+The SDK sends requests to the AMARACUS API; managed keys stay on the AMARACUS side and are never returned. Use it **on your server only** (Node.js 18 or newer). Never put an API key in browser, mobile or device code.
 
----
-
-## Installation
+## Install
 
 ```bash
-npm install @amaracus-sdk/sdk
+npm install @amaracus/sdk
 # or
-pnpm add @amaracus-sdk/sdk
+pnpm add @amaracus/sdk
 # or
-yarn add @amaracus-sdk/sdk
+yarn add @amaracus/sdk
 ```
 
----
+## Set up
 
-## Quickstart
+1. In the AMARACUS console, open **API Credentials** and generate an API key (`am_live_…`). Tick only the scopes the service needs (for example **Encrypt** for a service that only saves data).
+2. Open **Key Management → Internal & Development Keys**, click **Create Managed Key** (AES-256-GCM) and copy its **Key ID**.
+3. Put both in your server's environment:
 
-```typescript
-import { Amaracus } from '@amaracus-sdk/sdk';
-
-// Initialize with your project API key
-const amaracus = new Amaracus({
-  apiKey: process.env.AMARACUS_API_KEY!, // e.g. am_live_...
-  baseUrl: process.env.AMARACUS_BASE_URL || 'https://api.amaracus.tech',
-});
-
-async function main() {
-  // 1. Universal Authenticated Symmetric Encryption
-  const encrypted = await amaracus.crypto.encrypt({
-    algorithm: 'AES-256-GCM',
-    plaintext: Buffer.from('Sensitive Customer Record', 'utf-8'),
-  });
-
-  console.log('Encrypted Envelope:', encrypted.envelope);
-
-  // 2. Universal Decryption
-  const decrypted = await amaracus.crypto.decrypt({
-    envelope: encrypted.envelope,
-  });
-
-  console.log('Decrypted Plaintext:', decrypted.plaintext.toString('utf-8'));
-}
-
-main();
+```bash
+AMARACUS_API_KEY=am_live_...
+AMARACUS_KEY_ID=your-key-id
 ```
 
----
+`new Amaracus()` reads `AMARACUS_API_KEY`, and `AMARACUS_BASE_URL` if you run a self-hosted API (for example `http://localhost:4000/v1`).
 
-## Post-Quantum Cryptography (PQC)
+## Encrypt and decrypt
 
-```typescript
-// NIST FIPS 203 ML-KEM Key Encapsulation
-const kem = await amaracus.pqc.encapsulate({
-  algorithm: 'ML-KEM-768',
-  recipientPublicKey: '0123...hex',
-});
+```ts
+import { Amaracus } from '@amaracus/sdk';
 
-console.log('Shared Secret:', kem.sharedSecret);
-console.log('Ciphertext:', kem.ciphertext);
+const am = new Amaracus();
+const KEY_ID = process.env.AMARACUS_KEY_ID!;
+
+// Encrypt: store only the envelope (in your database, cache or file store).
+const { envelope } = await am.encrypt({ key: KEY_ID, data: 'Sensitive customer record', aad: 'customers:42:address' });
+
+// Decrypt: pass the envelope back with the same key and context.
+const { data } = await am.decrypt({ key: KEY_ID, envelope, aad: 'customers:42:address' });
 ```
 
----
+`aad` (optional context) is sealed into the envelope: decryption fails if the envelope is moved to another record.
 
-## Webhook Verification & Framework Adapters
+## Keys
 
-### Express Middleware Adapter
-```typescript
+```ts
+const key = await am.keys.create({ name: 'customer-data', algorithm: 'AES-256-GCM', purpose: 'ENCRYPT_DECRYPT' });
+const rotated = await am.keys.rotate(key.id); // same Key ID, new version; old envelopes still decrypt
+```
+
+## Hashing
+
+```ts
+const digest = await am.hash({ data: 'hello', algorithm: 'SHA-256' });
+```
+
+## Post-quantum key exchange (ML-KEM, FIPS 203)
+
+```ts
+const kp = await am.pqc.keypair({ algorithm: 'ML_KEM_768' });
+const enc = await am.pqc.encapsulate({ algorithm: 'ML_KEM_768', publicKey: kp.publicKey });
+const dec = await am.pqc.decapsulate({ algorithm: 'ML_KEM_768', cipherText: enc.cipherText, privateKey: kp.privateKey });
+// enc.sharedSecret === dec.sharedSecret
+```
+
+## Webhooks
+
+### Express
+
+```ts
 import express from 'express';
 import { amaracusWebhookMiddleware } from '@amaracus/sdk';
 
 const app = express();
-
 app.post(
   '/webhooks/amaracus',
-  express.raw({ type: 'application/json' }),
+  express.raw({ type: 'application/json' }), // raw body, before express.json()
   amaracusWebhookMiddleware({ secret: process.env.AMARACUS_WEBHOOK_SECRET! }),
   (req, res) => {
-    const event = req.amaracusEvent;
-    console.log(`Verified Event Received: ${event.type} (${event.id})`);
-    res.status(200).json({ received: true });
+    console.log('Verified event:', req.amaracusEvent.type);
+    res.json({ received: true });
   }
 );
 ```
 
-### Next.js App Router Route Handler
-```typescript
+### Next.js route handler
+
+```ts
 // app/api/webhooks/amaracus/route.ts
 import { verifyNextJsWebhook } from '@amaracus/sdk';
 
 export async function POST(req: Request) {
   try {
     const event = await verifyNextJsWebhook(req, process.env.AMARACUS_WEBHOOK_SECRET!);
-    console.log('Verified Event:', event.type);
-    return Response.json({ received: true });
+    return Response.json({ received: true, type: event.type });
   } catch (err: any) {
     return Response.json({ error: err.message }, { status: 400 });
   }
 }
 ```
 
----
+Signatures are HMAC-SHA256 over `timestamp.body` in the `X-AMARACUS-Signature` header; messages older than 300 seconds are rejected.
 
-## Security Invariants
+## Errors
 
-1. **Zero Browser Secret Exposure**: Never expose server-side API keys (`am_live_...`) to frontend or browser code.
-2. **Replay Protection**: Webhook headers enforce timestamp verification with an automatic 300-second tolerance window.
-3. **Idempotency**: Pass `idempotencyKey` in request options for state-changing operations to protect against duplicate execution.
+| Status | Meaning |
+|---|---|
+| 401 | API key missing or wrong |
+| 402 | No active plan |
+| 403 `INSUFFICIENT_SCOPE` | The API key lacks a scope; the message names it |
+| 404 `KEY_NOT_FOUND` | Wrong Key ID, or the key is in another project or environment |
+
+Each request is limited to 1 MB.
+
+## Links
+
+- Documentation: https://amaracus.tech/docs/
+- Source: https://github.com/AMARACUS/AMARACUS
+
+## Licence
+
+Apache-2.0

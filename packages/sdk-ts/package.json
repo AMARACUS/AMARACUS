@@ -27,32 +27,36 @@
   },
   "keywords": [
     "amaracus",
-    "cryptography",
-    "pqc",
+    "encryption",
+    "encryption-as-a-service",
     "kms",
-    "pki",
-    "zk",
-    "fhe",
-    "mpc",
-    "sdk",
-    "post-quantum",
+    "key-management",
     "envelope-encryption",
     "aes-gcm",
-    "argon2id"
+    "aes-256-gcm",
+    "post-quantum",
+    "pqc",
+    "ml-kem",
+    "webhooks",
+    "sdk",
+    "typescript"
   ],
   "author": "AMARACUS Engineering <engineering@amaracus.tech>",
   "license": "Apache-2.0",
-  "homepage": "https://amaracus.tech",
+  "homepage": "https://amaracus.tech/docs/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/amaracus/amaracus.git",
+    "url": "git+https://github.com/AMARACUS/AMARACUS.git",
     "directory": "packages/sdk-ts"
   },
   "bugs": {
-    "url": "https://github.com/amaracus/amaracus/issues"
+    "url": "https://github.com/AMARACUS/AMARACUS/issues"
   },
   "devDependencies": {
     "@types/node": "^22.20.3",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
