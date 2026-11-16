@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
+import { apiUrl } from "@/lib/api-base";
 
 interface ManagedKey {
   id: string;
@@ -159,16 +160,18 @@ export default function KeysManagementPage() {
   const [description, setDescription] = useState("");
   const [algorithm, setAlgorithm] = useState("AES-256-GCM");
   const [purpose, setPurpose] = useState("ENCRYPTION");
-  const [provider, setProvider] = useState("AZURE_KEY_VAULT");
+  const [provider, setProvider] = useState("LOCAL_DEV");
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedEnv, setSelectedEnv] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Key Details Drawer (Internal)
   const [selectedKey, setSelectedKey] = useState<ManagedKey | null>(null);
   const [keyVersions, setKeyVersions] = useState<KeyVersionItem[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
-  const [copiedFingerprint, setCopiedFingerprint] = useState(false);
+  // Which value was just copied (shows a tick for a moment)
+  const [copiedValue, setCopiedValue] = useState<string | null>(null);
 
   // Interactive Test Runner (Internal)
   const [testPlaintext, setTestPlaintext] = useState("Hello from AMARACUS KMS!");
@@ -339,6 +342,54 @@ export default function KeysManagementPage() {
     }
   };
 
+  // Copy a value (key ID, code snippet) to the clipboard
+  const copyToClipboard = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedValue(value);
+      setTimeout(() => setCopiedValue((current) => (current === value ? null : current)), 2000);
+    } catch {
+      setError("Could not copy to the clipboard. Select the text and copy it by hand.");
+    }
+  };
+
+  // Purpose follows from the algorithm: AES keys encrypt, the others sign
+  const handleAlgorithmChange = (alg: string) => {
+    setAlgorithm(alg);
+    setPurpose(alg === "AES-256-GCM" ? "ENCRYPTION" : "SIGNING");
+  };
+
+  // Create a managed key (Internal)
+  const handleCreateKey = async () => {
+    if (!activeOrg?.id) return;
+    if (!name.trim() || !selectedProject || !selectedEnv) {
+      setCreateError("Enter a name and choose a project and environment.");
+      return;
+    }
+    try {
+      setCreating(true);
+      setCreateError(null);
+      const res = await api.keys.create(activeOrg.id, {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        projectId: selectedProject,
+        environmentId: selectedEnv,
+        algorithm,
+        purpose,
+        provider,
+      });
+      setIsCreateModalOpen(false);
+      await loadData();
+      if (res?.data?.id) {
+        openKeyDetails(res.data as ManagedKey);
+      }
+    } catch (err: any) {
+      setCreateError(err.message || "Failed to create the key.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   // Open Details Drawer (Internal)
   const openKeyDetails = async (keyItem: ManagedKey) => {
     setSelectedKey(keyItem);
@@ -363,8 +414,8 @@ export default function KeysManagementPage() {
 
       // Encrypt
       const encRes = await api.keys.encrypt(activeOrg.id, selectedKey.id, {
+        // No AAD: the console decrypt route does not take one, so it could not open the envelope
         plaintext: testPlaintext,
-        aad: "AMARACUS-TEST-CONTEXT",
       });
 
       // Decrypt
@@ -999,6 +1050,7 @@ export default function KeysManagementPage() {
               <thead>
                 <tr className="bg-[#F8F9F8] border-b border-[#E9EDE7] text-[#767676] font-semibold">
                   <th className="p-3">Key Name</th>
+                  <th className="p-3">Key ID</th>
                   <th className="p-3">Provider</th>
                   <th className="p-3">Algorithm</th>
                   <th className="p-3">Version</th>
@@ -1010,6 +1062,22 @@ export default function KeysManagementPage() {
                 {keys.map((k) => (
                   <tr key={k.id} className="hover:bg-[#FAFBFA]">
                     <td className="p-3 font-semibold text-[#1A1A1A]">{k.name}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1.5">
+                        <code className="font-mono text-[11px] text-[#1A1A1A] bg-[#F8F9F8] border border-[#E9EDE7] rounded px-1.5 py-0.5 select-all">
+                          {k.id}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(k.id)}
+                          className="p-1 rounded text-[#636863] hover:text-[#008031] hover:bg-[#F0F2EE]"
+                          aria-label={`Copy key ID for ${k.name}`}
+                          title="Copy key ID"
+                        >
+                          {copiedValue === k.id ? <Check className="w-3.5 h-3.5 text-[#008031]" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </td>
                     <td className="p-3">{k.provider}</td>
                     <td className="p-3 font-mono text-[#636863]">{k.algorithm}</td>
                     <td className="p-3 font-mono text-[#636863]">v{k.currentVersion}</td>
@@ -1028,9 +1096,23 @@ export default function KeysManagementPage() {
                     </td>
                   </tr>
                 ))}
+                {keys.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-xs text-[#636863]">
+                      No managed keys yet. Click <strong>Create Managed Key</strong>. Each key gets an ID
+                      (<code className="font-mono">key_…</code>) that you pass to the SDK, the CLI or the API.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          {keys.length > 0 && (
+            <p className="text-[11px] text-[#767676]">
+              Use the <strong>Key ID</strong> in your code: <code className="font-mono">amaracus.encrypt({"{"} key: &quot;key_…&quot;, data {"}"})</code>,
+              the CLI&apos;s <code className="font-mono">--key-id</code>, or the <code className="font-mono">key</code> field of <code className="font-mono">POST /v1/encrypt</code>.
+            </p>
+          )}
         </div>
       )}
 
@@ -1831,6 +1913,273 @@ export default function KeysManagementPage() {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* CREATE MANAGED KEY MODAL (INTERNAL) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setCreateError(null);
+        }}
+        title="Create Managed Key"
+        description="The key material is generated and stored by AMARACUS. You get an ID to use in your code."
+      >
+        <div className="space-y-4 pt-2">
+          <div>
+            <label htmlFor="create-key-name" className="block text-xs font-medium text-[#1A1A1A] mb-1">Name</label>
+            <Input
+              id="create-key-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. customer-data"
+              className="text-xs"
+            />
+          </div>
+          <div>
+            <label htmlFor="create-key-description" className="block text-xs font-medium text-[#1A1A1A] mb-1">Description (optional)</label>
+            <Input
+              id="create-key-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What this key protects"
+              className="text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="create-key-project" className="block text-xs font-medium text-[#1A1A1A] mb-1">Project</label>
+              <select
+                id="create-key-project"
+                value={selectedProject}
+                onChange={(e) => handleProjectChange(e.target.value)}
+                className="w-full h-9 px-3 rounded-md border border-[#D5DCD2] bg-white text-xs"
+              >
+                {projects.length === 0 && <option value="">No projects. Create one under Projects.</option>}
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="create-key-env" className="block text-xs font-medium text-[#1A1A1A] mb-1">Environment</label>
+              <select
+                id="create-key-env"
+                value={selectedEnv}
+                onChange={(e) => setSelectedEnv(e.target.value)}
+                className="w-full h-9 px-3 rounded-md border border-[#D5DCD2] bg-white text-xs"
+              >
+                {(projects.find((p) => p.id === selectedProject)?.environments || []).map((env) => (
+                  <option key={env.id} value={env.id}>{env.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="create-key-alg" className="block text-xs font-medium text-[#1A1A1A] mb-1">Algorithm</label>
+              <select
+                id="create-key-alg"
+                value={algorithm}
+                onChange={(e) => handleAlgorithmChange(e.target.value)}
+                className="w-full h-9 px-3 rounded-md border border-[#D5DCD2] bg-white text-xs"
+              >
+                <option value="AES-256-GCM">AES-256-GCM (encrypt and decrypt)</option>
+                <option value="Ed25519">Ed25519 (sign and verify)</option>
+                <option value="ECDSA-P256">ECDSA P-256 (sign and verify)</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="create-key-provider" className="block text-xs font-medium text-[#1A1A1A] mb-1">Where the key is held</label>
+              <select
+                id="create-key-provider"
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="w-full h-9 px-3 rounded-md border border-[#D5DCD2] bg-white text-xs"
+              >
+                <option value="LOCAL_DEV">AMARACUS (encrypted under the platform master key)</option>
+                <option value="AZURE_KEY_VAULT">AMARACUS Azure Key Vault (Business and Pay-As-You-Go)</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-[11px] text-[#767676]">
+            Purpose: <span className="font-mono">{purpose}</span>. To use your own Azure vault, use the Customer BYOK tab.
+          </p>
+
+          {createError && (
+            <div className="p-3 rounded bg-[#FEF2F2] border border-[#F87171] text-[#991B1B] text-xs">{createError}</div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)} className="text-xs">
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={creating}
+              onClick={handleCreateKey}
+              className="bg-[#008031] hover:bg-[#006A28] text-white text-xs"
+            >
+              {creating ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+              Create Key
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* KEY DETAILS MODAL (INTERNAL) */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={!!selectedKey}
+        onClose={() => setSelectedKey(null)}
+        title={selectedKey ? `Key: ${selectedKey.name}` : "Key"}
+        maxWidth="max-w-2xl"
+      >
+        {selectedKey && (
+          <div className="space-y-5 pt-2">
+            {/* Key ID */}
+            <div className="p-3 rounded-lg bg-[#F0FDF4] border border-[#86EFAC] space-y-1.5">
+              <div className="text-xs font-semibold text-[#166534]">Key ID: use this in the SDK, CLI and API</div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 font-mono text-sm text-[#1A1A1A] bg-white border border-[#D5DCD2] rounded px-2 py-1.5 break-all select-all">
+                  {selectedKey.id}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copyToClipboard(selectedKey.id)}
+                  className="text-xs shrink-0"
+                >
+                  {copiedValue === selectedKey.id ? <Check className="w-3 h-3 mr-1 text-[#008031]" /> : <Copy className="w-3 h-3 mr-1" />}
+                  {copiedValue === selectedKey.id ? "Copied" : "Copy ID"}
+                </Button>
+              </div>
+              <p className="text-[11px] text-[#166534]">
+                This is not your API key. Your API key (am_live_…) proves who you are; the key ID says which key to use.
+              </p>
+            </div>
+
+            {/* Facts */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+              <div className="text-[#767676]">Algorithm</div><div className="font-mono">{selectedKey.algorithm}</div>
+              <div className="text-[#767676]">Purpose</div><div className="font-mono">{selectedKey.purpose}</div>
+              <div className="text-[#767676]">Held by</div><div className="font-mono">{selectedKey.provider}</div>
+              <div className="text-[#767676]">Current version</div><div className="font-mono">v{selectedKey.currentVersion}</div>
+              <div className="text-[#767676]">Status</div><div className="font-mono">{selectedKey.status}</div>
+              <div className="text-[#767676]">Created</div><div>{new Date(selectedKey.createdAt).toLocaleString()}</div>
+            </div>
+
+            {/* How to use it */}
+            {(() => {
+              const isEncryption = selectedKey.purpose === "ENCRYPTION" || selectedKey.purpose === "KEY_WRAPPING";
+              const snippets = isEncryption
+                ? [
+                    {
+                      label: "TypeScript SDK",
+                      code: `const { envelope } = await amaracus.encrypt({ key: "${selectedKey.id}", data: "hello" });\nconst { data } = await amaracus.decrypt({ key: "${selectedKey.id}", envelope });`,
+                    },
+                    {
+                      label: "CLI",
+                      code: `amaracus crypto encrypt --key-id ${selectedKey.id} --pt "hello"`,
+                    },
+                    {
+                      label: "HTTP",
+                      code: `curl -X POST ${apiUrl("/v1/encrypt")} \\\n  -H "Authorization: Bearer $AMARACUS_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"key":"${selectedKey.id}","data":"hello"}'`,
+                    },
+                  ]
+                : [
+                    {
+                      label: "TypeScript SDK",
+                      code: `const signed = await amaracus.sign({ key: "${selectedKey.id}", data: "hello" });`,
+                    },
+                    {
+                      label: "HTTP",
+                      code: `curl -X POST ${apiUrl("/v1/sign")} \\\n  -H "Authorization: Bearer $AMARACUS_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"key":"${selectedKey.id}","data":"hello"}'`,
+                    },
+                  ];
+              return (
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-[#1A1A1A]">Use it in your code</div>
+                  {snippets.map((s) => (
+                    <div key={s.label} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-[#767676]">{s.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(s.code)}
+                          className="text-[11px] text-[#636863] hover:text-[#008031] flex items-center gap-1"
+                          aria-label={`Copy ${s.label} example`}
+                        >
+                          {copiedValue === s.code ? <Check className="w-3 h-3 text-[#008031]" /> : <Copy className="w-3 h-3" />}
+                          {copiedValue === s.code ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                      <pre className="p-2.5 rounded bg-[#1A1A1A] text-[#E9EDE7] font-mono text-[11px] overflow-x-auto whitespace-pre">{s.code}</pre>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Versions */}
+            <div className="space-y-1.5">
+              <div className="text-xs font-semibold text-[#1A1A1A]">Versions</div>
+              {drawerLoading ? (
+                <div className="text-xs text-[#767676] flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Loading versions…</div>
+              ) : keyVersions.length === 0 ? (
+                <div className="text-xs text-[#767676]">No version details available.</div>
+              ) : (
+                <ul className="text-xs space-y-1">
+                  {keyVersions.map((v) => (
+                    <li key={v.id} className="flex items-center justify-between border border-[#E9EDE7] rounded px-2 py-1">
+                      <span className="font-mono">v{v.version}</span>
+                      <span className="font-mono text-[#636863]">{v.status}</span>
+                      <span className="text-[#767676]">{new Date(v.createdAt).toLocaleDateString()}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Try it */}
+            {(selectedKey.purpose === "ENCRYPTION" || selectedKey.purpose === "KEY_WRAPPING") && (
+              <div className="space-y-2 border-t border-[#E9EDE7] pt-4">
+                <div className="text-xs font-semibold text-[#1A1A1A]">Try it: encrypt, then decrypt</div>
+                <div className="flex gap-2">
+                  <Input
+                    value={testPlaintext}
+                    onChange={(e) => setTestPlaintext(e.target.value)}
+                    className="text-xs"
+                    aria-label="Text to encrypt"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={testRunning || selectedKey.status !== "ACTIVE"}
+                    onClick={runEnvelopeTest}
+                    className="bg-[#008031] hover:bg-[#006A28] text-white text-xs shrink-0"
+                  >
+                    {testRunning ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                    Run
+                  </Button>
+                </div>
+                {testResult?.error && (
+                  <div className="p-2.5 rounded bg-[#FEF2F2] border border-[#F87171] text-[#991B1B] text-xs">{testResult.error}</div>
+                )}
+                {testResult && !testResult.error && (
+                  <div className={`p-2.5 rounded text-xs space-y-1 ${testResult.success ? "bg-[#F0FDF4] border border-[#86EFAC] text-[#166534]" : "bg-[#FEF2F2] border border-[#F87171] text-[#991B1B]"}`}>
+                    <div><strong>Decrypted:</strong> {testResult.decrypted}</div>
+                    <div className="font-mono text-[11px] break-all opacity-80">
+                      Envelope: {typeof testResult.envelope === "string" ? testResult.envelope : JSON.stringify(testResult.envelope)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );
