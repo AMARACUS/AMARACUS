@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "tech.amaracus/amaracus",
+  "title": "AMARACUS",
+  "description": "Manage encryption keys, encrypt and decrypt data, and get integration code.",
+  "version": "1.0.0",
+  "websiteUrl": "https://amaracus.tech/mcp/",
+  "repository": {
+    "url": "https://github.com/AMARACUS/AMARACUS",
+    "source": "github",
+    "subfolder": "integrations/amaracus"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.amaracus.tech/mcp"
+    }
+  ]
+}

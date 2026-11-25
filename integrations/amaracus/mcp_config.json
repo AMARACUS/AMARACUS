@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "amaracus": {
+      "serverUrl": "https://api.amaracus.tech/mcp"
+    }
+  }
+}

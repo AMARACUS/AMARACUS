@@ -1,0 +1,11 @@
+{
+  "name": "amaracus",
+  "version": "1.0.0",
+  "description": "Manage AMARACUS encryption keys, encrypt and decrypt data, and add encryption to your application.",
+  "mcpServers": {
+    "amaracus": {
+      "httpUrl": "https://api.amaracus.tech/mcp"
+    }
+  },
+  "contextFileName": "integrations/amaracus/context.md"
+}

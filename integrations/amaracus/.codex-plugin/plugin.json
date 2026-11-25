@@ -1,0 +1,106 @@
+{
+  "name": "amaracus",
+  "version": "1.0.0",
+  "description": "Manage AMARACUS encryption keys, encrypt and decrypt data, and add encryption to your application.",
+  "author": {
+    "name": "AMARACUS",
+    "email": "support@amaracus.tech",
+    "url": "https://amaracus.tech"
+  },
+  "homepage": "https://amaracus.tech/mcp/",
+  "repository": "https://github.com/AMARACUS/AMARACUS",
+  "license": "Apache-2.0",
+  "keywords": [
+    "encryption",
+    "key-management",
+    "kms",
+    "cryptography",
+    "security",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "AMARACUS",
+    "shortDescription": "Encryption keys and encrypted data",
+    "longDescription": "Create, list, rotate, disable and enable encryption keys in your AMARACUS organization, encrypt and decrypt text with them, compute digests, and get integration code for your application. AMARACUS only accesses the project and environment you choose, with the permissions you tick when connecting. Key material is never returned.",
+    "developerName": "AMARACUS",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Manage encryption keys",
+      "Encrypt and decrypt text",
+      "Integration code"
+    ],
+    "websiteURL": "https://amaracus.tech/mcp/",
+    "supportURL": "https://amaracus.tech/contact/",
+    "privacyPolicyURL": "https://amaracus.tech/privacy/",
+    "termsOfServiceURL": "https://amaracus.tech/terms/",
+    "defaultPrompt": [
+      "List my AMARACUS keys.",
+      "Create an AMARACUS key called customer-notes.",
+      "Add field encryption to this app with AMARACUS."
+    ],
+    "brandColor": "#008031",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  },
+  "extensions": {
+    "com.openai": {
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "List keys",
+              "prompt": "List my AMARACUS keys.",
+              "tools_triggered": "list_keys",
+              "expected_behavior": "Returns the keys of the connected organization with name, algorithm, purpose and status. No key material is shown."
+            },
+            {
+              "description": "Create a key",
+              "prompt": "Create an AMARACUS key called review-demo for encrypting notes.",
+              "tools_triggered": "create_key",
+              "expected_behavior": "Creates one AES-256-GCM key and returns its key ID. If a key with that name already exists, reports that instead."
+            },
+            {
+              "description": "Encrypt text",
+              "prompt": "Encrypt the text \"hello from the review\" with my review-demo key and the context demo:1.",
+              "tools_triggered": "list_keys, encrypt_data",
+              "expected_behavior": "Finds the key ID and returns an encrypted envelope."
+            },
+            {
+              "description": "Decrypt the envelope",
+              "prompt": "Decrypt that envelope with the context demo:1.",
+              "tools_triggered": "decrypt_data",
+              "expected_behavior": "Returns the text \"hello from the review\"."
+            },
+            {
+              "description": "Get integration code",
+              "prompt": "Show me how to call AMARACUS from a Node.js server.",
+              "tools_triggered": "get_integration_guide",
+              "expected_behavior": "Returns Node.js code that encrypts and decrypts with the AMARACUS HTTP API, reading the API key from the server environment."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Deleting a key is not supported",
+              "prompt": "Permanently delete my review-demo key."
+            },
+            {
+              "description": "Key material is never returned",
+              "prompt": "Show me the secret key bytes of my review-demo key."
+            },
+            {
+              "description": "The wrong context must not decrypt",
+              "prompt": "Decrypt that envelope with the context demo:2."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "This plugin does not sell products or process payments."
+      },
+      "publication": {
+        "release_notes": "First release: key management, encryption, decryption, hashing, usage counts and integration code."
+      }
+    }
+  }
+}

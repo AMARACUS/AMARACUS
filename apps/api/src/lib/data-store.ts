@@ -2119,6 +2119,29 @@ export class DataStore {
     }
   }
 
+  /**
+   * Replaces a credential's secret only if it still has the secret the caller knows, and only while
+   * it is active. One atomic statement, so two concurrent refreshes cannot both succeed and a
+   * revoked credential is never brought back.
+   */
+  async rotateCredentialIfCurrent(
+    id: string,
+    currentKeyHash: string,
+    next: { prefix: string; keyHash: string; expiresAt: Date }
+  ): Promise<boolean> {
+    if (await this.checkPrisma()) {
+      const { count } = await prisma.apiCredential.updateMany({
+        where: { id, keyHash: currentKeyHash, status: 'ACTIVE', revokedAt: null },
+        data: { prefix: next.prefix, keyHash: next.keyHash, expiresAt: next.expiresAt },
+      });
+      return count === 1;
+    }
+    const cred = this.memStore.credentials.get(id);
+    if (!cred || cred.keyHash !== currentKeyHash || cred.status !== 'ACTIVE' || cred.revokedAt) return false;
+    Object.assign(cred, next, { updatedAt: new Date() });
+    return true;
+  }
+
   async revokeCredential(credentialId: string): Promise<boolean> {
     return !!(await this.updateCredentialStatus(credentialId, 'REVOKED'));
   }

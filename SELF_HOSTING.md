@@ -282,3 +282,12 @@ under a new master key while `AMARACUS_PREVIOUS_MASTER_KEY` holds the old one.
 - Apply updates, and watch [SECURITY.md](SECURITY.md) for how vulnerabilities are reported and fixed. AMARACUS
   has no independent security audit and no FIPS 140-3 validation; assess it against your own requirements
   before relying on it for regulated data.
+
+## Connect AI assistants and coding agents (MCP)
+
+Your API is also an MCP server, at `<API_URL>/mcp` (Streamable HTTP). Add that address to any MCP client.
+
+- Clients that support OAuth find the sign-in by themselves and open the approval page of your console (`<APP_URL>/connect/`). Set `API_URL` and `APP_URL` to the public addresses of your API and console; hosted assistants such as ChatGPT and Claude need both to be reachable over HTTPS.
+- Other clients can send an API key as a Bearer token.
+
+Tools run with the permissions of the connection, and encrypt, decrypt, hash and rotate count as operations. The files in `integrations/` and `gemini-extension.json` connect to AMARACUS Cloud; change the address in them to use your own API.

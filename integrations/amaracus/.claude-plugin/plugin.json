@@ -1,0 +1,24 @@
+{
+  "name": "amaracus",
+  "displayName": "AMARACUS",
+  "version": "1.0.0",
+  "description": "Manage AMARACUS encryption keys, encrypt and decrypt data, and add encryption to your application.",
+  "author": {
+    "name": "AMARACUS",
+    "email": "support@amaracus.tech",
+    "url": "https://amaracus.tech"
+  },
+  "homepage": "https://amaracus.tech/mcp/",
+  "repository": "https://github.com/AMARACUS/AMARACUS",
+  "license": "Apache-2.0",
+  "keywords": [
+    "encryption",
+    "key-management",
+    "kms",
+    "cryptography",
+    "security",
+    "mcp"
+  ],
+  "icon": "./assets/icon.png",
+  "privacyPolicyUrl": "https://amaracus.tech/privacy/"
+}

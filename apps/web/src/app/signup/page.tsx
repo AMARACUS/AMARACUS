@@ -7,6 +7,7 @@ import { Shield, Loader2, AlertCircle, Mail, ArrowLeft, CheckCircle2, RefreshCw 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { sanitizeText } from "@/lib/sanitize";
 import {
   SIGNUP_AGE_ERROR,
@@ -81,7 +82,7 @@ export default function SignupPage() {
       localStorage.removeItem("amaracus_underage_screened");
       const params = new URLSearchParams(window.location.search);
       const plan = params.get("plan");
-      const redirect = params.get("redirect");
+      const redirect = safeRedirectPath(params.get("redirect"));
       const planRedirect = plan ? signupPlanRedirect(plan.toUpperCase()) : null;
       if (plan && planRedirect) {
         if (SIGNUP_PLAN_LABELS[plan.toUpperCase()]) setSelectedPlan(plan.toUpperCase());

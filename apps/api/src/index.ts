@@ -34,6 +34,8 @@ import uploadsRoutes from './routes/uploads';
 import intelligenceRoutes from './routes/intelligence';
 import { advancedCryptoRouter } from './routes/advanced-crypto';
 import { v1Router } from './routes/v1';
+import { mountMcp } from './mcp';
+import { createConsentRouter } from './mcp/oauth';
 import { idempotencyMiddleware } from './middleware/idempotency';
 import { usageTracker } from './middleware/usage-tracker';
 import { metricsExporter } from './lib/metrics-exporter';
@@ -54,6 +56,11 @@ app.set('trust proxy', resolveTrustProxyHops());
 app.use(requestContextMiddleware);
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// MCP server and its OAuth endpoints. Bearer tokens only, so they have their own open CORS policy
+// and come before the console's CORS, cookie and body middleware below.
+mountMcp(app);
+
 // The hosted service's own origins. A self-hosted installation allows only APP_URL and
 // CORS_ALLOWED_ORIGINS.
 const DEFAULT_ALLOWED_ORIGINS: string[] = cloud ? cloud.CLOUD_ALLOWED_ORIGINS : [];
@@ -259,6 +266,7 @@ const mountDual = (path: string, ...handlers: any[]) => {
 };
 
 mountDual('/auth', authRoutes);
+mountDual('/mcp-connect', createConsentRouter());
 mountDual('/user', userRoutes);
 mountDual('/email', emailRouter);
 mountDual('/organizations', organizationsRoutes);

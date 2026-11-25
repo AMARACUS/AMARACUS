@@ -7,6 +7,7 @@ import { Shield, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function LoginPage() {
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const redirectParam = params.get("redirect");
+      const redirectParam = safeRedirectPath(params.get("redirect"));
       if (redirectParam) {
         setRedirectUrl(redirectParam);
         setSignupLink(`/signup?redirect=${encodeURIComponent(redirectParam)}`);

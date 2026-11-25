@@ -1,0 +1,15 @@
+{
+  "name": "amaracus",
+  "description": "Encryption and key management for coding agents.",
+  "owner": {
+    "name": "AMARACUS",
+    "email": "support@amaracus.tech"
+  },
+  "plugins": [
+    {
+      "name": "amaracus",
+      "source": "./integrations/amaracus",
+      "description": "Manage AMARACUS encryption keys, encrypt and decrypt data, and add encryption to your application."
+    }
+  ]
+}

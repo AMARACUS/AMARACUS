@@ -1,0 +1,20 @@
+{
+  "name": "amaracus",
+  "interface": {
+    "displayName": "AMARACUS"
+  },
+  "plugins": [
+    {
+      "name": "amaracus",
+      "source": {
+        "source": "local",
+        "path": "./integrations/amaracus"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

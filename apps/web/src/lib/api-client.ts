@@ -193,6 +193,32 @@ class ApiClient {
     me: () => this.request('/v1/auth/me'),
   };
 
+  // --- MCP CONNECTIONS (the /connect consent page) ---
+  mcpConnect = {
+    request: (request: string) =>
+      this.request<{
+        data: {
+          clientName: string;
+          destination: string;
+          isLocalApp: boolean;
+          scopes: { id: string; label: string; preselected: boolean }[];
+        };
+      }>('/v1/mcp-connect/request', { method: 'POST', body: JSON.stringify({ request }) }),
+
+    approve: (orgId: string, body: { request: string; environmentId: string; scopes: string[] }) =>
+      this.request<{ data: { redirectTo: string } }>('/v1/mcp-connect/approve', {
+        method: 'POST',
+        headers: { 'X-Organization-Id': orgId },
+        body: JSON.stringify(body),
+      }),
+
+    deny: (request: string) =>
+      this.request<{ data: { redirectTo: string } }>('/v1/mcp-connect/deny', {
+        method: 'POST',
+        body: JSON.stringify({ request }),
+      }),
+  };
+
   // --- ORGANIZATIONS ---
   organizations = {
     list: () => this.request('/v1/organizations'),

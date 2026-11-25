@@ -115,6 +115,15 @@ async function hitBucket(key: string, windowMs: number): Promise<RateLimitRecord
   }
 }
 
+/**
+ * True the first time a key is seen within the window, false after that. Unlike the limiters it
+ * fails closed: if the shared store cannot answer, the error goes to the caller.
+ */
+export async function consumeOnce(key: string, windowMs: number): Promise<boolean> {
+  const store: RateLimitStore = isTestEnv() ? defaultRateLimiter : postgresRateLimitStore;
+  return (await store.hit(`once:${key}`, windowMs)).count === 1;
+}
+
 export interface RateLimiterOptions {
   limit?: number;
   windowMs?: number;
