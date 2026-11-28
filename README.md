@@ -15,35 +15,36 @@ policies, an audit log, organizations with scoped API keys, and a web console, b
 | --- | --- | --- |
 | Who runs it | You, on your own servers or cloud accounts | AMARACUS, at [amaracus.tech](https://amaracus.tech) |
 | Infrastructure and credentials | Yours: database, email, Azure, storage | AMARACUS's |
-| Price | 1,000 operations free for life, then USD 0.15 per 1,000 | Starter, Pro, Business or Pay As You Go |
-| Free plan | The 1,000-operation lifetime allowance | None |
+| Price | 10,000 operations free for life, then USD 0.15 per 1,000 | Starter, Pro, Business or Pay As You Go |
+| Free plan | The 10,000-operation lifetime allowance | None |
 | Data and keys | Never leave your infrastructure | Held by AMARACUS Cloud |
 
 The self-hosted allowance and licence keys do not carry over to Cloud, and Cloud plans do not cover
 self-hosted use. Full prices: [AMARACUS-PRICING.md](AMARACUS-PRICING.md).
 
-### Self-hosted: 1,000 operations free for life, then paid
+### Self-hosted: 10,000 operations free for life, then paid
 
-- The first **1,000 successful billable cryptographic operations** are free, **once, for the lifetime** of
+- The first **10,000 successful billable cryptographic operations** are free, **once, for the lifetime** of
   your corporate group. The allowance is cumulative, not monthly.
 - It is the same for individuals, students, startups, companies, banks and enterprises.
 - **One corporate group, one allowance**: every employee, subsidiary, affiliate, project, environment,
   installation and server shares it. Reinstalling or adding servers does not reset it.
-- From operation **1,001**, operations are paid for at **USD 0.15 per 1,000** (the Cloud Pay As You Go
-  rate), by buying a licence key and adding it in the console (**Billing**).
+- From operation **10,001**, operations are paid for at **USD 0.15 per 1,000** (the Cloud Pay As You Go
+  rate), by buying a licence key and adding it in the console (**Billing**). Teams can instead buy a
+  **Team licence**: USD 1,200 a year for 10,000,000 operations and email support.
 - Billable operations are defined precisely in section 5 of the
   [Additional Commercial Terms](AMARACUS-ADDITIONAL-COMMERCIAL-TERMS.md). Failed operations, health checks,
   console visits and idempotent retries are not counted.
 
-**The built-in limit, disclosed:** when an installation's ledger reaches its allowance (1,000 plus any
+**The built-in limit, disclosed:** when an installation's ledger reaches its allowance (10,000 plus any
 licence keys), new protective operations (encrypt, sign, wrap, key generation and similar) return
 `402 SELF_HOST_LICENSE_REQUIRED`. **Decrypt, unwrap, decapsulate and verify always keep working**, so data
 you protected earlier is never locked away. The limit runs entirely on your own systems.
 
 ### AMARACUS Cloud: four plans
 
-Starter (USD 2/month, 15,000 operations), Pro (USD 20/month, 150,000), Business (USD 99/month, 1,000,000)
-and Pay As You Go (USD 0.15 per 1,000). There is no hosted free plan. Sign up at
+Starter (USD 9/month, 50,000 operations), Pro (USD 49/month, 500,000), Business (USD 299/month, 3,000,000),
+each also yearly with two months free, and Pay As You Go (USD 0.15 per 1,000). There is no hosted free plan. Sign up at
 [amaracus.tech](https://amaracus.tech).
 
 ## No telemetry

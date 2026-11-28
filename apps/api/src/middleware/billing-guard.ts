@@ -59,7 +59,7 @@ function sendLicenseAcceptanceRequired(res: Response) {
 /**
  * Self-hosted gate. Returns true when it has answered the request.
  * - Not activated: nothing runs, except decrypt, unwrap and verify.
- * - Past the lifetime allowance (1,000 free plus licence keys): new operations stop with 402.
+ * - Past the lifetime allowance (10,000 free plus licence keys): new operations stop with 402.
  * - Decrypt, unwrap and verify are never stopped, so earlier data always stays readable.
  * The check is local; nothing is sent to AMARACUS.
  */

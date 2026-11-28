@@ -168,7 +168,7 @@ export function SelfHostActivationGate() {
               allowance, not a monthly one, and it is shared by your whole corporate group across all installations.
             </li>
             <li>
-              From operation 1,001 you need a licence key. Keys are priced at <strong>USD 0.15 per 1,000 operations</strong>,
+              From operation 10,001 you need a licence key. Keys are priced at <strong>USD 0.15 per 1,000 operations</strong>,
               the same rate as AMARACUS Cloud Pay As You Go. Buy keys from AMARACUS ({cloudDefaults.licensingContactEmail})
               and paste them in under Licence and Usage.
             </li>

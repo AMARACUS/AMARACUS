@@ -1258,15 +1258,15 @@ class ApiClient {
         body: JSON.stringify(body),
       }),
 
-    checkoutPreview: (orgId: string, planId: string, country?: string) =>
+    checkoutPreview: (orgId: string, planId: string, country?: string, interval: 'month' | 'year' = 'month') =>
       this.request<{ data: any }>(`/v1/billing/checkout/preview?organizationId=${orgId}`, {
         method: 'POST',
         headers: { 'x-organization-id': orgId },
-        body: JSON.stringify({ planId, country }),
+        body: JSON.stringify({ planId, country, interval }),
       }),
 
-    checkout: (orgId: string, body: { planId: string; successUrl?: string; cancelUrl?: string }) =>
-      this.request<{ data: { checkoutUrl?: string; checkoutId?: string; planId?: string } }>(`/v1/billing/checkout?organizationId=${orgId}`, {
+    checkout: (orgId: string, body: { planId: string; interval?: 'month' | 'year'; successUrl?: string; cancelUrl?: string }) =>
+      this.request<{ data: { checkoutUrl?: string; checkoutId?: string; planId?: string; interval?: string } }>(`/v1/billing/checkout?organizationId=${orgId}`, {
         method: 'POST',
         headers: { 'x-organization-id': orgId },
         body: JSON.stringify(body),
@@ -1305,11 +1305,11 @@ class ApiClient {
       }),
 
     razorpayPlans: (orgId: string) =>
-      this.request<{ data: { plans: { planId: string; amount: number; currency: string }[] } }>(`/v1/billing/razorpay/plans?organizationId=${orgId}`, {
+      this.request<{ data: { plans: { planId: string; interval?: 'month' | 'year'; amount: number; currency: string }[] } }>(`/v1/billing/razorpay/plans?organizationId=${orgId}`, {
         headers: { 'x-organization-id': orgId },
       }),
 
-    razorpayCreateSubscription: (orgId: string, body: { planId: string }) =>
+    razorpayCreateSubscription: (orgId: string, body: { planId: string; interval?: 'month' | 'year' }) =>
       this.request<{ data: { subscription_id: string } }>(`/v1/billing/razorpay/subscription?organizationId=${orgId}`, {
         method: 'POST',
         headers: { 'x-organization-id': orgId },

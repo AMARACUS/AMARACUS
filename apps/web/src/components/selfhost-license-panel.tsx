@@ -129,7 +129,7 @@ export function SelfHostLicensePanel() {
       <div className="border-b border-[#E9EDE7] pb-6">
         <h1 className="font-editorial text-3xl md:text-4xl font-bold text-[#1A1A1A] tracking-tight">Licence and usage</h1>
         <p className="mt-1.5 text-sm text-[#636863] leading-relaxed">
-          The first {nf.format(usage?.freeAllowance ?? 1000)} successful cryptographic operations on this installation
+          The first {nf.format(usage?.freeAllowance ?? 10000)} successful cryptographic operations on this installation
           are free for life. After that you need a licence key, at USD {rate} per 1,000 operations. Decrypt, unwrap and
           verify always keep working. This installation sends nothing to AMARACUS.
         </p>

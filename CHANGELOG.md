@@ -2,6 +2,12 @@
 
 All notable changes to self-hosted AMARACUS. Dates are UTC.
 
+## 1.1.0 (2026-11-28)
+
+- The lifetime free allowance is now **10,000** billable operations (was 1,000). Additional Commercial Terms
+  1.1.0 say so in 4.1 and 4.6; installations ask for acceptance of the new text once.
+- New **Team licence**: USD 1,200 a year for 10,000,000 operations and email support (see `AMARACUS-PRICING.md`).
+
 ## 1.0.0 (unreleased): first source-available release
 
 ### Licensing

@@ -1,7 +1,7 @@
 # AMARACUS Additional Commercial Terms
 
-Version: 1.0.0
-Effective date: 12 November 2026
+Version: 1.1.0
+Effective date: 28 November 2026
 Licensor: Amaracus Technologies (corporate registration pending), Bengaluru, Karnataka 560103, India ("AMARACUS", "we", "us")
 Licensing contact: legal@amaracus.tech
 
@@ -59,7 +59,7 @@ AMARACUS is **source-available** software. It is not "open source" as defined by
 
 ## 4. Lifetime Allowance and payment
 
-4.1 **1,000 operations free, once, for life.** The first 1,000 successful Billable Operations performed by your Corporate Group are free of charge. The allowance is cumulative and lifetime. It is not monthly and it never renews.
+4.1 **10,000 operations free, once, for life.** The first 10,000 successful Billable Operations performed by your Corporate Group are free of charge. The allowance is cumulative and lifetime. It is not monthly and it never renews.
 
 4.2 **The same for everyone.** The Lifetime Allowance is the same for individuals, students, startups, companies, banks, public bodies and enterprises. There is no separate non-commercial, academic or evaluation allowance.
 
@@ -69,7 +69,7 @@ AMARACUS is **source-available** software. It is not "open source" as defined by
 
 4.5 **Changes to your group.** If Corporate Groups combine (merger, acquisition or similar), their Billable Operations are added together from the date of the combination, and the combined group has one Lifetime Allowance. An entity that leaves a Corporate Group does not receive a new Lifetime Allowance for use it made or benefited from as part of that group.
 
-4.6 **Payment from operation 1,001.** Every Billable Operation after the first 1,000 must be paid for at the price in `AMARACUS-PRICING.md` as it stood when you bought the Licence Key that covers it. At the date of these Terms the price is **USD 0.15 per 1,000 Billable Operations**, the same as the AMARACUS Cloud Pay As You Go rate.
+4.6 **Payment from operation 10,001.** Every Billable Operation after the first 10,000 must be paid for at the price in `AMARACUS-PRICING.md` as it stood when you bought the Licence Key that covers it. At the date of these Terms the price is **USD 0.15 per 1,000 Billable Operations**, the same as the AMARACUS Cloud Pay As You Go rate.
 
 4.7 **How you pay: Licence Keys.** You pay in advance by buying Licence Keys from us. Each Licence Key covers a stated number of Billable Operations. A Licence Key belongs to the Corporate Group it was issued to. The operations it covers may be used once: entering the same Licence Key in several Installations does not multiply them, and the total across all your Installations must not exceed what you have bought.
 

@@ -20,7 +20,7 @@ import { BILLING_PLANS } from './billing-plans';
  */
 
 /** Successful billable operations that are free, once, for the lifetime of the licensee. */
-export const FREE_LIFETIME_OPERATIONS = 1000;
+export const FREE_LIFETIME_OPERATIONS = 10000;
 
 /** The self-hosted rate is the AMARACUS Cloud Pay As You Go rate. */
 export const SELF_HOST_RATE_PER_1K_OPS_CENTS = BILLING_PLANS.PAYG.costPer1kOpsCents;

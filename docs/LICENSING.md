@@ -5,7 +5,7 @@ AMARACUS is offered under two documents at once:
 1. [`LICENSE`](../LICENSE): the **PolyForm Shield License 1.0.0**, the official text, unmodified
    (SHA-256 `56328093d57c87dcf2811ddcc824caf2723a07ffc332e6fbe4f9f108a2893a91` with LF line endings).
 2. [`AMARACUS-ADDITIONAL-COMMERCIAL-TERMS.md`](../AMARACUS-ADDITIONAL-COMMERCIAL-TERMS.md): payment beyond
-   the 1,000-operation lifetime allowance, records, audit, no-telemetry commitments and the rest.
+   the 10,000-operation lifetime allowance, records, audit, no-telemetry commitments and the rest.
 
 This page explains the structure and states openly which points are untested. Nothing here claims that a court,
 regulator or independent lawyer has confirmed the arrangement.

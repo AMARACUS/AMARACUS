@@ -256,6 +256,30 @@ export interface BillingUsageEventRecord {
   polarEventId?: string | null;
 }
 
+/**
+ * Allowances are monthly. A yearly subscription's period is cut into months counted from its
+ * start, and the month containing `now` is returned (the last one ends at the period end).
+ * Periods of 40 days or less are returned as they are.
+ */
+export function monthlySliceOfPeriod(start: Date, end: Date, now: Date): { periodStart: Date; periodEnd: Date } {
+  const days = (end.getTime() - start.getTime()) / 86_400_000;
+  if (days <= 40) return { periodStart: start, periodEnd: end };
+  const addMonths = (d: Date, n: number) => {
+    const r = new Date(d.getTime());
+    const day = r.getUTCDate();
+    r.setUTCDate(1);
+    r.setUTCMonth(r.getUTCMonth() + n);
+    const lastDay = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
+    r.setUTCDate(Math.min(day, lastDay));
+    return r;
+  };
+  let n = 0;
+  while (n < 24 && addMonths(start, n + 1).getTime() <= now.getTime()) n++;
+  const sliceStart = addMonths(start, n);
+  const nextStart = addMonths(start, n + 1);
+  return { periodStart: sliceStart, periodEnd: nextStart.getTime() > end.getTime() ? end : nextStart };
+}
+
 export type OveragePolicy = 'HARD_STOP' | 'AUTHORIZED_OVERAGE' | 'ENTERPRISE_CUSTOM';
 
 export interface BillingSafetyStateRecord {
@@ -5210,10 +5234,7 @@ export class DataStore {
   async getActiveBillingPeriod(organizationId: string): Promise<{ periodStart: Date; periodEnd: Date }> {
     const sub = await this.getBillingSubscription(organizationId);
     if (sub && sub.currentPeriodStart && sub.currentPeriodEnd) {
-      return {
-        periodStart: new Date(sub.currentPeriodStart),
-        periodEnd: new Date(sub.currentPeriodEnd),
-      };
+      return monthlySliceOfPeriod(new Date(sub.currentPeriodStart), new Date(sub.currentPeriodEnd), new Date());
     }
     const now = new Date();
     return {
@@ -5289,6 +5310,18 @@ export class DataStore {
       this.memStore.billingUsages.set(key, record);
     }
     return { ...record };
+  }
+
+  /** The usage record of one exact billing period, or null if nothing was recorded in it. */
+  async getBillingUsageForPeriod(organizationId: string, periodStart: Date, periodEnd: Date): Promise<BillingUsageRecord | null> {
+    if (await this.checkPrisma()) {
+      const found = await prisma.billingUsage.findUnique({
+        where: { organizationId_periodStart_periodEnd: { organizationId, periodStart, periodEnd } },
+      });
+      return (found as BillingUsageRecord) || null;
+    }
+    const record = this.memStore.billingUsages.get(`${organizationId}_${periodStart.toISOString()}_${periodEnd.toISOString()}`);
+    return record ? { ...record } : null;
   }
 
   async incrementBillingUsage(

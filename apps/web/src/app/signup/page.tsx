@@ -83,7 +83,12 @@ export default function SignupPage() {
       const params = new URLSearchParams(window.location.search);
       const plan = params.get("plan");
       const redirect = safeRedirectPath(params.get("redirect"));
-      const planRedirect = plan ? signupPlanRedirect(plan.toUpperCase()) : null;
+      const basePlanRedirect = plan ? signupPlanRedirect(plan.toUpperCase()) : null;
+      // A yearly choice on the pricing page carries through to checkout.
+      const planRedirect =
+        basePlanRedirect && params.get("interval") === "year" && basePlanRedirect.includes("?")
+          ? `${basePlanRedirect}&interval=year`
+          : basePlanRedirect;
       if (plan && planRedirect) {
         if (SIGNUP_PLAN_LABELS[plan.toUpperCase()]) setSelectedPlan(plan.toUpperCase());
         setRedirectUrl(planRedirect);

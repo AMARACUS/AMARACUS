@@ -202,9 +202,9 @@ The same pattern works on Azure (Container Apps, App Service, Azure Database for
 - Every successful billable operation (section 5 of the terms) is appended to the ledger table
   `usage_ledger_entry`, with the running lifetime total and a SHA-256 hash chain. A database trigger rejects
   updates and deletes. Failed operations and repeated idempotency keys are not added.
-- **Console → Billing** shows lifetime operations, the free allowance (1,000), licensed operations and what
+- **Console → Billing** shows lifetime operations, the free allowance (10,000), licensed operations and what
   remains; verifies the hash chain; downloads the ledger as JSON Lines; and accepts licence keys.
-- After 1,000 lifetime operations, new protective operations return `402 SELF_HOST_LICENSE_REQUIRED` until you
+- After 10,000 lifetime operations, new protective operations return `402 SELF_HOST_LICENSE_REQUIRED` until you
   add a licence key. Decrypt, unwrap, decapsulate and verify are never blocked.
 - Buy licence keys from legal@amaracus.tech (price: [AMARACUS-PRICING.md](AMARACUS-PRICING.md)). A key is
   verified offline; adding it sends nothing anywhere.

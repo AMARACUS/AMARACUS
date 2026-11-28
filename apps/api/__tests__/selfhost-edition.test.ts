@@ -4,7 +4,7 @@
  *  - Nothing runs until both licences are accepted (click-to-accept activation).
  *  - Every successful billable operation is appended once to a hash-chained local ledger;
  *    failed operations and idempotent retries are not counted.
- *  - 1,000 lifetime operations are free; after that new operations need a licence key, while
+ *  - 10,000 lifetime operations are free; after that new operations need a licence key, while
  *    decrypt and verify always keep working.
  *  - Licence keys are verified offline; the installation makes no outbound request.
  *  - Startup validation refuses AMARACUS's own addresses and missing customer configuration.
@@ -144,7 +144,7 @@ describe('edition', () => {
 
     const t = await tenant();
     const signedIn = await call(t.session, 'GET', '/v1/selfhost/status');
-    expect(signedIn.body.data.usage).toMatchObject({ lifetimeOperations: 0, freeAllowance: 1000, licensedOperations: 0, remaining: 1000, ratePer1kOpsCents: 15, currency: 'USD' });
+    expect(signedIn.body.data.usage).toMatchObject({ lifetimeOperations: 0, freeAllowance: 10000, licensedOperations: 0, remaining: 10000, ratePer1kOpsCents: 15, currency: 'USD' });
 
     // An expired or unknown session is not an error for the status call.
     const stale = await call('sess_does_not_exist', 'GET', '/v1/selfhost/status');
@@ -296,22 +296,22 @@ describe('usage ledger', () => {
 });
 
 describe('lifetime allowance and licence keys', () => {
-  it('stops new operations after 1,000 lifetime operations, but never decrypt or verify', async () => {
+  it('stops new operations after 10,000 lifetime operations, but never decrypt or verify', async () => {
     const t = await tenant();
     await accept(t.session);
     const created = await call(t.key, 'POST', '/v1/keys', { name: 'k', algorithm: 'AES-256-GCM', purpose: 'ENCRYPTION' });
     const enc = await call(t.key, 'POST', '/v1/encrypt', { key: created.body.data.id, data: 'keep me readable' });
     expect(enc.status).toBe(200);
 
-    // Bring the installation to 999 operations, then use the last free one.
+    // Bring the installation to 9,999 operations, then use the last free one.
     const used = await ledger.getLifetimeOperations();
-    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk', operationType: 'ENCRYPT', quantity: 999 - used });
-    expect((await call(t.key, 'POST', '/v1/hash', { algorithm: 'SHA-256', data: 'op 1000' })).status).toBe(200);
-    expect(await ledger.getLifetimeOperations()).toBe(1000);
+    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk', operationType: 'ENCRYPT', quantity: 9999 - used });
+    expect((await call(t.key, 'POST', '/v1/hash', { algorithm: 'SHA-256', data: 'op 10000' })).status).toBe(200);
+    expect(await ledger.getLifetimeOperations()).toBe(10000);
 
     // Operation 1,001 needs a licence key.
     const blocked = [
-      await call(t.key, 'POST', '/v1/hash', { algorithm: 'SHA-256', data: 'op 1001' }),
+      await call(t.key, 'POST', '/v1/hash', { algorithm: 'SHA-256', data: 'op 10001' }),
       await call(t.key, 'POST', '/v1/encrypt', { key: created.body.data.id, data: 'new data' }),
       await call(t.key, 'POST', '/v1/keys', { name: 'k2', algorithm: 'AES-256-GCM', purpose: 'ENCRYPTION' }),
       await call(t.session, 'POST', '/v1/credentials', { name: 'new', environmentId: t.env.id, scopes: ['crypto:encrypt'] }, { 'X-Organization-Id': t.org.id }),
@@ -320,21 +320,21 @@ describe('lifetime allowance and licence keys', () => {
       expect(r.status).toBe(402);
       expect(r.body.error.code).toBe('SELF_HOST_LICENSE_REQUIRED');
     }
-    expect(blocked[0].body.error).toMatchObject({ freeAllowance: 1000, totalAllowance: 1000, ratePer1kOpsCents: 15 });
-    expect(await ledger.getLifetimeOperations()).toBe(1000);
+    expect(blocked[0].body.error).toMatchObject({ freeAllowance: 10000, totalAllowance: 10000, ratePer1kOpsCents: 15 });
+    expect(await ledger.getLifetimeOperations()).toBe(10000);
 
     // Earlier data stays readable, and the decrypt is still recorded.
     const dec = await call(t.key, 'POST', '/v1/decrypt', { key: created.body.data.id, envelope: enc.body.data.envelope });
     expect(dec.status).toBe(200);
-    expect(await ledger.getLifetimeOperations()).toBe(1001);
+    expect(await ledger.getLifetimeOperations()).toBe(10001);
     const status = (await call(t.session, 'GET', '/v1/selfhost/status')).body.data;
-    expect(status.usage).toMatchObject({ lifetimeOperations: 1001, remaining: 0, licenseRequired: true });
+    expect(status.usage).toMatchObject({ lifetimeOperations: 10001, remaining: 0, licenseRequired: true });
   });
 
   it('accepts only keys signed by AMARACUS, adds their operations, and refuses a repeat', async () => {
     const t = await tenant();
     await accept(t.session);
-    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk', operationType: 'ENCRYPT', quantity: 1000 });
+    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk', operationType: 'ENCRYPT', quantity: 10000 });
     expect((await call(t.key, 'POST', '/v1/hash', { algorithm: 'SHA-256', data: 'x' })).status).toBe(402);
 
     const forged = licenceKey(1_000_000, 'lic_forged', crypto.generateKeyPairSync('ed25519').privateKey);
@@ -348,7 +348,7 @@ describe('lifetime allowance and licence keys', () => {
     const key = licenceKey(5000, 'lic_real');
     const added = await call(t.session, 'POST', '/v1/selfhost/license-keys', { key });
     expect(added.status).toBe(200);
-    expect(added.body.data.usage).toMatchObject({ licensedOperations: 5000, totalAllowance: 6000, remaining: 5000, licenseRequired: false });
+    expect(added.body.data.usage).toMatchObject({ licensedOperations: 5000, totalAllowance: 15000, remaining: 5000, licenseRequired: false });
     expect(added.body.data.licenseKeys).toHaveLength(1);
     expect(JSON.stringify(added.body.data)).not.toContain(key);
 
@@ -374,7 +374,7 @@ describe('lifetime allowance and licence keys', () => {
 describe('gate and ledger cannot be steered by the caller', () => {
   async function atCap(t: any) {
     await accept(t.session);
-    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk-cap', operationType: 'ENCRYPT', quantity: 1000 });
+    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk-cap', operationType: 'ENCRYPT', quantity: 10000 });
   }
 
   it('ignores body labels such as operation: "verify" on a protective route', async () => {
@@ -437,7 +437,7 @@ describe('gate and ledger cannot be steered by the caller', () => {
     expect(ok.status).toBe(200);
     await new Promise((r) => setTimeout(r, 50));
     expect(await ledger.getLifetimeOperations()).toBe(before + 1);
-    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk-sign', operationType: 'ENCRYPT', quantity: 1000 });
+    await ledger.appendLedgerEntry({ organizationId: t.org.id, operationId: 'bulk-sign', operationType: 'ENCRYPT', quantity: 10000 });
     const blocked = await call(t.session, 'POST', path, { data: 'hello' }, { 'X-Organization-Id': t.org.id });
     expect(blocked.status).toBe(402);
   });

@@ -10,7 +10,8 @@ import {
 } from './billing-plans';
 import { isTestEnv } from './runtime-config';
 import { isSelfHosted } from './edition';
-import { SELF_HOSTED_PLAN } from './billing-plans';
+import { SELF_HOSTED_PLAN, applyPricingVersion } from './billing-plans';
+import { pricingVersionOf } from './billing-catalog';
 import { getSelfHostUsage, isActivated, selfHostGateEnforced } from './selfhost-license';
 
 export interface ResourceLimitCheckResult {
@@ -74,7 +75,8 @@ export class EntitlementEngine {
       }
     }
 
-    return getPlanDefinition(subscription.plan);
+    // Subscribers on the v1 price list keep its price and allowance.
+    return applyPricingVersion(getPlanDefinition(subscription.plan), pricingVersionOf(subscription));
   }
 
   private async getTestFixturePlan(organizationId: string): Promise<PlanDefinition | null> {

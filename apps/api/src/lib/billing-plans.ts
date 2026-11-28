@@ -9,6 +9,8 @@
  * - Feature entitlements (BYOK, HSM, PQC, FHE, ZK)
  */
 
+import { resolvePolarProduct } from './billing-catalog';
+
 /** The four AMARACUS Cloud plans, plus FREE (no active plan). */
 export type CloudPlanId = 'FREE' | 'STARTER' | 'PRO' | 'BUSINESS' | 'PAYG';
 /** SELF_HOSTED is the single "plan" of a self-hosted installation; it is never sold on Cloud. */
@@ -26,6 +28,10 @@ function cloudPolarDefault(name: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function polarIdFromEnv(name: string): string | undefined {
+  return process.env[name] || cloudPolarDefault(name);
 }
 
 export interface PlanFeatureEntitlements {
@@ -61,6 +67,14 @@ export interface PlanDefinition {
   polarProductId?: string;
   polarPriceId?: string;
   polarMeterId?: string;
+  /**
+   * Overage authorized by default when this plan is bought, in cents per month: operations past
+   * the allowance continue at costPer1kOpsCents until this much extra has been used. The customer
+   * can lower it to 0 (fail closed) or raise it in the console. 0 = fail closed by default.
+   */
+  defaultOverageCapCents: number;
+  /** v1 or v2 price list (lib/billing-catalog.ts). Absent on plans with a single price list. */
+  pricingVersion?: 'v1' | 'v2';
   badge?: string;
   isPopular?: boolean;
 }
@@ -81,6 +95,7 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
     description: 'Account only. Choose a paid plan to use the API.',
     monthlyBasePriceCents: 0,
     costPer1kOpsCents: 0,
+    defaultOverageCapCents: 0,
     limits: {
       maxProjects: 1,
       maxKeys: 5,
@@ -101,14 +116,15 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
     id: 'STARTER',
     name: 'Starter',
     description: 'For individual developers and students shipping their first production workloads',
-    monthlyBasePriceCents: 200, // $2.00 / mo
-    costPer1kOpsCents: 14, // ~$0.133 / 1k ops included, the same rate as Pro
+    monthlyBasePriceCents: 900, // $9.00 / mo, or $90 / yr
+    costPer1kOpsCents: 12, // overage: $0.12 / 1,000 ops past the allowance
+    defaultOverageCapCents: 900, // at most one more month's price in overage by default
+    pricingVersion: 'v2',
     limits: {
       maxProjects: 2,
       maxKeys: 20,
       maxMembers: 1,
-      // A tenth of Pro. Below ~13,334 ops, PAYG at $0.15 / 1k would cost less than $2.
-      includedMonthlyOperations: 15000,
+      includedMonthlyOperations: 50000,
     },
     features: {
       byok: false,
@@ -120,21 +136,22 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
       webhooks: true,
       developerApi: true,
     },
-    // No fallback IDs: until the Starter product exists in Polar, checkout returns 503.
-    polarProductId: process.env.POLAR_PRODUCT_ID_STARTER || undefined,
-    polarPriceId: process.env.POLAR_PRICE_ID_STARTER || undefined,
+    // The monthly v2 product. lib/billing-catalog.ts has the yearly and the v1 products.
+    polarProductId: polarIdFromEnv('POLAR_PRODUCT_ID_STARTER_MONTHLY'),
   },
   PRO: {
     id: 'PRO',
     name: 'Pro',
     description: 'For growing teams requiring robust cryptographic throughput and security',
-    monthlyBasePriceCents: 2000, // $20.00 / mo
-    costPer1kOpsCents: 14, // ~$0.133 / 1k ops included
+    monthlyBasePriceCents: 4900, // $49.00 / mo, or $490 / yr
+    costPer1kOpsCents: 12, // overage: $0.12 / 1,000 ops past the allowance
+    defaultOverageCapCents: 4900,
+    pricingVersion: 'v2',
     limits: {
       maxProjects: 10,
       maxKeys: 100,
       maxMembers: 5,
-      includedMonthlyOperations: 150000,
+      includedMonthlyOperations: 500000,
     },
     features: {
       byok: false,
@@ -145,8 +162,7 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
       webhooks: true,
       developerApi: true,
     },
-    polarProductId: process.env.POLAR_PRODUCT_ID_PRO || cloudPolarDefault('POLAR_PRODUCT_ID_PRO'),
-    polarPriceId: process.env.POLAR_PRICE_ID_PRO || cloudPolarDefault('POLAR_PRICE_ID_PRO'),
+    polarProductId: polarIdFromEnv('POLAR_PRODUCT_ID_PRO_MONTHLY'),
     badge: 'Popular',
     isPopular: true,
   },
@@ -154,13 +170,15 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
     id: 'BUSINESS',
     name: 'Business',
     description: 'For high-scale enterprises requiring BYOK and dedicated HSM governance',
-    monthlyBasePriceCents: 9900, // $99.00 / mo
-    costPer1kOpsCents: 10, // ~$0.099 / 1k ops included
+    monthlyBasePriceCents: 29900, // $299.00 / mo, or $2,990 / yr
+    costPer1kOpsCents: 12, // overage: $0.12 / 1,000 ops past the allowance
+    defaultOverageCapCents: 29900,
+    pricingVersion: 'v2',
     limits: {
       maxProjects: 50,
       maxKeys: 500,
       maxMembers: 25,
-      includedMonthlyOperations: 1000000,
+      includedMonthlyOperations: 3000000,
     },
     features: {
       byok: true, // Full BYOK + Customer Managed HSM
@@ -171,8 +189,7 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
       webhooks: true,
       developerApi: true,
     },
-    polarProductId: process.env.POLAR_PRODUCT_ID_BUSINESS || cloudPolarDefault('POLAR_PRODUCT_ID_BUSINESS'),
-    polarPriceId: process.env.POLAR_PRICE_ID_BUSINESS || cloudPolarDefault('POLAR_PRICE_ID_BUSINESS'),
+    polarProductId: polarIdFromEnv('POLAR_PRODUCT_ID_BUSINESS_MONTHLY'),
   },
   PAYG: {
     id: 'PAYG',
@@ -180,6 +197,7 @@ export const BILLING_PLANS: Record<CloudPlanId, PlanDefinition> = {
     description: 'Continuous metering with zero base fee and predictable per-operation unit pricing',
     monthlyBasePriceCents: 0, // $0 base fee
     costPer1kOpsCents: 15, // $0.15 / 1,000 ops ($150 per 1M)
+    defaultOverageCapCents: 0, // PAYG has its own spending limit (paygSpendingLimitCents)
     limits: {
       maxProjects: 1000, // Platform safety limits
       maxKeys: 10000,
@@ -211,7 +229,8 @@ export const SELF_HOSTED_PLAN: PlanDefinition = {
   name: 'Self-hosted',
   description: 'Self-hosted AMARACUS under PolyForm Shield 1.0.0 and the AMARACUS Additional Commercial Terms',
   monthlyBasePriceCents: 0,
-  costPer1kOpsCents: 15, // the Pay As You Go rate, from lifetime operation 1,001
+  costPer1kOpsCents: 15, // the Pay As You Go rate, past the lifetime free allowance
+  defaultOverageCapCents: 0,
   limits: {
     maxProjects: 1000000,
     maxKeys: 1000000,
@@ -240,10 +259,37 @@ export function getPlanDefinition(planId?: string | null): PlanDefinition {
 }
 
 /**
- * Retrieve plan definition matching a Polar product or price identifier.
+ * The v1 price list (sold until 2026-11-28). Subscribers who bought it keep these prices,
+ * allowances and its fail-closed default; everything else is as in BILLING_PLANS.
+ */
+export const LEGACY_V1_TERMS: Record<'STARTER' | 'PRO' | 'BUSINESS', { monthlyBasePriceCents: number; costPer1kOpsCents: number; includedMonthlyOperations: number }> = {
+  STARTER: { monthlyBasePriceCents: 200, costPer1kOpsCents: 14, includedMonthlyOperations: 15000 },
+  PRO: { monthlyBasePriceCents: 2000, costPer1kOpsCents: 14, includedMonthlyOperations: 150000 },
+  BUSINESS: { monthlyBasePriceCents: 9900, costPer1kOpsCents: 10, includedMonthlyOperations: 1000000 },
+};
+
+/** The plan as a subscriber on the given price list has it. */
+export function applyPricingVersion(plan: PlanDefinition, version: 'v1' | 'v2'): PlanDefinition {
+  const legacy = LEGACY_V1_TERMS[plan.id as keyof typeof LEGACY_V1_TERMS];
+  if (version !== 'v1' || !legacy) return plan;
+  return {
+    ...plan,
+    monthlyBasePriceCents: legacy.monthlyBasePriceCents,
+    costPer1kOpsCents: legacy.costPer1kOpsCents,
+    defaultOverageCapCents: 0,
+    pricingVersion: 'v1',
+    limits: { ...plan.limits, includedMonthlyOperations: legacy.includedMonthlyOperations },
+  };
+}
+
+/**
+ * Retrieve plan definition matching a Polar product or price identifier, from either price list
+ * and either billing interval.
  */
 export function getPolarPlanByProductId(productIdOrPriceId?: string | null): PlanDefinition | null {
   if (!productIdOrPriceId) return null;
+  const entry = resolvePolarProduct(productIdOrPriceId);
+  if (entry) return BILLING_PLANS[entry.planId as CloudPlanId] || null;
   const match = Object.values(BILLING_PLANS).find(
     (p) => p.polarProductId === productIdOrPriceId || p.polarPriceId === productIdOrPriceId
   );

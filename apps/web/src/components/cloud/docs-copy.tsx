@@ -5,7 +5,7 @@ import React from "react";
 export function DocsPlanNote() {
   return (
     <>
-      Note: this installation is activated once its owner has accepted the licences. The first 1,000 cryptographic operations are free for life; see Licence and usage in the console.
+      Note: this installation is activated once its owner has accepted the licences. The first 10,000 cryptographic operations are free for life; see Licence and usage in the console.
     </>
   );
 }
